@@ -1,0 +1,157 @@
+# =============================================================================
+# JOTTY HOME ASSISTANT INTEGRATION VIA HACS
+# These helpers MUST be created for Jotty to work properly
+# Go to Settings > Devices & Services > Helpers > Create Helper
+# Create each helper exactly as specified below
+# =============================================================================
+input_text:
+  jotty_note_id:
+    name: "Note ID"
+    initial: ""
+    max: 255
+
+  jotty_quick_action_data:
+    name: Quick Action Data
+    max: 255
+    icon: mdi:cog
+
+  jotty_note_title:
+    name: "Note Title"
+    initial: ""
+    max: 255
+
+  jotty_note_content:
+    name: "Note Content"
+    initial: ""
+    max: 255
+    mode: text
+
+  jotty_edit_note_content:
+    name: "Edit Note Content"
+    initial: ""
+    max: 255
+    mode: text
+
+  jotty_edit_note_title:
+    name: "Edit Note Title"
+    initial: ""
+    max: 255
+
+  jotty_checklist_id:
+    name: "Checklist ID"
+    initial: ""
+    max: 255
+
+  jotty_checklist_title:
+    name: "Checklist Title"
+    initial: ""
+    max: 255
+
+  jotty_selected_checklist_id:
+    name: "Selected Checklist ID"
+    initial: ""
+    max: 255
+
+  jotty_selected_checklist_title:
+    name: "Selected Checklist Title"
+    initial: ""
+    max: 255
+
+  jotty_selected_checklist_type:
+    name: "Selected Checklist Type"
+    initial: "simple"
+    max: 50
+
+  jotty_item_text:
+    name: "Item Text"
+    initial: ""
+    max: 255
+
+  jotty_loading_item:
+    name: "Loading Item"
+    initial: ""
+    max: 100
+
+input_select:
+  jotty_checklist_type:
+    name: "Checklist Type"
+    options:
+      - "simple"
+      - "task"
+    initial: "simple"
+
+  jotty_task_status:
+    name: "Task Status"
+    options:
+      - "todo"
+      - "in_progress"
+      - "paused"
+      - "completed"
+    initial: "todo"
+
+  jotty_note_picker:
+    name: "Note Picker"
+    options:
+      - "-- Pick a note --"
+    initial: "-- Pick a note --"
+
+  jotty_checklist_picker:
+    name: "Checklist Picker"
+    options:
+      - "-- Pick a checklist --"
+    initial: "-- Pick a checklist --"
+
+  jotty_item_picker:
+    name: "Item Picker"
+    options:
+      - "-- Select item --"
+    initial: "-- Select item --"
+
+  jotty_item_status:
+    name: "Item Status"
+    options:
+      - "-- Select status --"
+      - "todo"
+      - "in_progress"
+      - "paused"
+      - "completed"
+    initial: "-- Select status --"
+
+input_number:
+  jotty_selected_item_index:
+    name: "Selected Item Index"
+    min: 0
+    max: 1000
+    step: 1
+    initial: 0
+    mode: box
+
+input_boolean:
+  jotty_item_completed:
+    name: "Item Completed"
+    initial: false
+
+  jotty_is_loading:
+    name: "Is Loading"
+    initial: false
+    icon: mdi:loading
+
+template:
+  - sensor:
+      - name: "New Note Character Count"
+        unique_id: jotty_new_note_char_count
+        state: "{{ states('input_text.jotty_note_content') | length }}"
+        unit_of_measurement: "chars"
+        icon: mdi:counter
+        attributes:
+          max: 255
+          remaining: "{{ 255 - (states('input_text.jotty_note_content') | length) }}"
+          
+      - name: "Edit Note Character Count"
+        unique_id: jotty_edit_note_char_count
+        state: "{{ states('input_text.jotty_edit_note_content') | length }}"
+        unit_of_measurement: "chars"
+        icon: mdi:counter
+        attributes:
+          max: 255
+          remaining: "{{ 255 - (states('input_text.jotty_edit_note_content') | length) }}"

@@ -1,0 +1,365 @@
+# =============================================================================
+# JOTTY HOME ASSISTANT INTEGRATION VIA HACS
+# Copy and paste this at the bottom of automations.yaml
+# NOTE: All notes/lists automatically use "Home Assistant" category
+# You MUST create the category "Home Assistant" in both Lists AND Notes
+# =============================================================================
+
+- id: jotty_auto_update_note_picker_fixed
+  alias: "Jotty: Auto Update Note Picker"
+  trigger:
+    - platform: state
+      entity_id:
+        - sensor.jotty_total_notes
+    - platform: homeassistant
+      event: start
+  action:
+    #- delay: "00:00:00.5"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.jotty_note_picker
+      data:
+        options: >-
+          {%- set ns = namespace(items=['-- Pick a note --'], titles={}) -%}
+          {%- set notes = states.sensor | selectattr('name', 'search', '^Jotty Note:') | rejectattr('state', 'eq', 'unavailable') | list -%}
+          {%- for state in notes -%}
+            {%- set title = state.state -%}
+            {%- if title in ns.titles -%}
+              {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}
+            {%- else -%}
+              {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- set ns2 = namespace(counts={}) -%}
+          {%- for state in notes | sort(attribute='attributes.updated', reverse=true) -%}
+            {%- set title = state.state -%}
+            {%- set note_id = state_attr(state.entity_id, 'note_id') -%}
+            {%- if ns.titles[title] > 1 -%}
+              {%- set current_count = ns2.counts.get(title, 0) + 1 -%}
+              {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}
+              {%- set display_title = title ~ ' (' ~ note_id[-6:] ~ ')' -%}
+            {%- else -%}
+              {%- set display_title = title -%}
+            {%- endif -%}
+            {%- set ns.items = ns.items + [display_title] -%}
+          {%- endfor -%}
+          {{ ns.items }}
+
+- id: jotty_auto_update_checklist_picker_fixed
+  alias: "Jotty: Auto Update Checklist Picker"
+  trigger:
+    - platform: state
+      entity_id:
+        - sensor.jotty_total_checklists
+    - platform: homeassistant
+      event: start
+  action:
+    #- delay: "00:00:00.5"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.jotty_checklist_picker
+      data:
+        options: >-
+          {%- set ns = namespace(items=['-- Pick a checklist --'], titles={}) -%}
+          {%- set lists = states.sensor | selectattr('name', 'search', '^Jotty List:') | rejectattr('state', 'eq', 'unavailable') | list -%}
+          {%- for state in lists -%}
+            {%- set title = state_attr(state.entity_id, 'title') -%}
+            {%- if title -%}
+              {%- if title in ns.titles -%}
+                {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}
+              {%- else -%}
+                {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {%- set ns2 = namespace(counts={}) -%}
+          {%- for state in lists | sort(attribute='attributes.updated', reverse=true) -%}
+            {%- set title = state_attr(state.entity_id, 'title') -%}
+            {%- if title -%}
+              {%- set list_id = state_attr(state.entity_id, 'checklist_id') -%}
+              {%- if ns.titles[title] > 1 -%}
+                {%- set current_count = ns2.counts.get(title, 0) + 1 -%}
+                {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}
+                {%- set display_title = title ~ ' (' ~ list_id[-6:] ~ ')' -%}
+              {%- else -%}
+                {%- set display_title = title -%}
+              {%- endif -%}
+              {%- set ns.items = ns.items + [display_title] -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ ns.items }}
+
+- id: jotty_load_note_when_picked
+  alias: "Jotty: Load Note When Picked"
+  trigger:
+    - platform: state
+      entity_id: input_select.jotty_note_picker
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', '-- Pick a note --'] }}"
+  action:
+    - variables:
+        selected_option: "{{ states('input_select.jotty_note_picker') }}"
+        selected_title: >-
+          {%- if '(' in selected_option and selected_option.endswith(')') -%}
+            {{ selected_option.split(' (')[0] }}
+          {%- else -%}
+            {{ selected_option }}
+          {%- endif -%}
+        note_id_hint: >-
+          {%- if '(' in selected_option and selected_option.endswith(')') -%}
+            {{ selected_option.split('(')[-1].rstrip(')') }}
+          {%- else -%}
+            
+          {%- endif -%}
+        note_entity: >-
+          {%- for s in states.sensor -%}
+            {%- if s.name.startswith('Jotty Note:') -%}
+              {%- if note_id_hint and state_attr(s.entity_id, 'note_id') and state_attr(s.entity_id, 'note_id').endswith(note_id_hint) -%}
+                {{ s.entity_id }}
+              {%- elif not note_id_hint and s.state == selected_title -%}
+                {{ s.entity_id }}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+    - condition: template
+      value_template: "{{ note_entity | trim != '' }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_note_id
+      data:
+        value: "{{ state_attr(note_entity, 'note_id') or '' }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_edit_note_title
+      data:
+        value: "{{ states(note_entity) }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_edit_note_content
+      data:
+        value: "{{ state_attr(note_entity, 'content') or '' }}"
+
+- id: jotty_load_checklist_when_picked
+  alias: "Jotty: Load Checklist When Picked"
+  trigger:
+    - platform: state
+      entity_id: input_select.jotty_checklist_picker
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', '-- Pick a checklist --'] }}"
+  action:
+    - variables:
+        selected_option: "{{ states('input_select.jotty_checklist_picker') }}"
+        selected_title: >-
+          {%- if '(' in selected_option and selected_option.endswith(')') -%}
+            {{ selected_option.split(' (')[0] }}
+          {%- else -%}
+            {{ selected_option }}
+          {%- endif -%}
+        list_id_hint: >-
+          {%- if '(' in selected_option and selected_option.endswith(')') -%}
+            {{ selected_option.split('(')[-1].rstrip(')') }}
+          {%- else -%}
+            
+          {%- endif -%}
+        list_entity: >-
+          {%- for s in states.sensor -%}
+            {%- if s.name.startswith('Jotty List:') -%}
+              {%- set title = state_attr(s.entity_id, 'title') -%}
+              {%- set list_id = state_attr(s.entity_id, 'checklist_id') -%}
+              {%- if list_id_hint and list_id and list_id.endswith(list_id_hint) -%}
+                {{ s.entity_id }}
+              {%- elif not list_id_hint and title == selected_title -%}
+                {{ s.entity_id }}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+    - condition: template
+      value_template: "{{ list_entity | trim != '' }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_selected_checklist_id
+      data:
+        value: "{{ state_attr(list_entity, 'checklist_id') or '' }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_selected_checklist_title
+      data:
+        value: "{{ state_attr(list_entity, 'title') or '' }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_selected_checklist_type
+      data:
+        value: "{{ state_attr(list_entity, 'type') or 'simple' }}"
+
+- id: jotty_load_checklist_items
+  alias: "Jotty: Load Checklist Items"
+  trigger:
+    - platform: state
+      entity_id: input_text.jotty_selected_checklist_id
+  condition:
+    - condition: template
+      value_template: "{{ states('input_text.jotty_selected_checklist_id') not in ['', 'unknown', 'unavailable'] }}"
+  action:
+    - variables:
+        checklist_id: "{{ states('input_text.jotty_selected_checklist_id') }}"
+        list_entity: >-
+          {%- for s in states.sensor -%}
+            {%- if s.name.startswith('Jotty List:') -%}
+              {%- if state_attr(s.entity_id, 'checklist_id') == checklist_id -%}
+                {{ s.entity_id }}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+    - condition: template
+      value_template: "{{ list_entity | trim != '' }}"
+    - service: input_select.set_options
+      target:
+        entity_id: input_select.jotty_item_picker
+      data:
+        options: >-
+          {%- set items = state_attr(list_entity, 'items') or [] -%}
+          {%- set ns = namespace(options=['-- Select item --']) -%}
+          {%- for item in items -%}
+            {%- set ns.options = ns.options + [loop.index0 ~ '. ' ~ item.text] -%}
+          {%- endfor -%}
+          {{ ns.options }}
+
+- id: jotty_load_item_details
+  alias: "Jotty: Load Item Details"
+  trigger:
+    - platform: state
+      entity_id: input_select.jotty_item_picker
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', '-- Select item --'] }}"
+  action:
+    - variables:
+        checklist_id: "{{ states('input_text.jotty_selected_checklist_id') }}"
+        list_entity: >-
+          {%- for s in states.sensor -%}
+            {%- if s.name.startswith('Jotty List:') -%}
+              {%- if state_attr(s.entity_id, 'checklist_id') == checklist_id -%}
+                {{ s.entity_id }}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+        item_str: "{{ states('input_select.jotty_item_picker') }}"
+        item_index: "{{ item_str.split('.')[0] | int }}"
+    - condition: template
+      value_template: "{{ list_entity | trim != '' }}"
+    - variables:
+        items: "{{ state_attr(list_entity, 'items') or [] }}"
+        item: "{{ items[item_index] if item_index < (items | length) else {} }}"
+    - service: input_number.set_value
+      target:
+        entity_id: input_number.jotty_selected_item_index
+      data:
+        value: "{{ item_index }}"
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_item_text
+      data:
+        value: "{{ item.text or '' }}"
+    - service: input_boolean.turn_{{ 'on' if item.get('completed', false) else 'off' }}
+      target:
+        entity_id: input_boolean.jotty_item_completed
+    - service: input_select.select_option
+      target:
+        entity_id: input_select.jotty_item_status
+      data:
+        option: "{{ item.status if item.get('status') else '-- Select status --' }}"
+
+- id: 'jotty_quick_list_actions'
+  alias: 'Jotty: Quick List Actions from Card'
+  description: 'Handles check/uncheck/status/add/delete actions'
+  mode: parallel
+  max: 20
+  trigger:
+    - platform: state
+      entity_id: input_text.jotty_quick_action_data
+  condition:
+    - condition: template
+      value_template: "{{ trigger.to_state.state != '' and trigger.to_state.state != trigger.from_state.state }}"
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.jotty_is_loading
+    
+    - variables:
+        action_data: "{{ states('input_text.jotty_quick_action_data').split('|||') }}"
+        list_id: "{{ action_data[0] }}"
+    - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ action_data | length > 2 and action_data[2] == 'check' }}"
+        sequence:
+          - service: jotty.check_item
+            data:
+              checklist_id: "{{ list_id }}"
+              item_index: "{{ action_data[1] | int }}"
+          #- delay: "00:00:00.3"
+      - conditions:
+          - condition: template
+            value_template: "{{ action_data | length > 2 and action_data[2] == 'uncheck' }}"
+        sequence:
+          - service: jotty.uncheck_item
+            data:
+              checklist_id: "{{ list_id }}"
+              item_index: "{{ action_data[1] | int }}"
+          #- delay: "00:00:00.3"
+      - conditions:
+          - condition: template
+            value_template: "{{ action_data | length > 2 and action_data[2] == 'status' }}"
+        sequence:
+          - variables:
+              new_status: "{{ action_data[3] }}"
+          - choose:
+            - conditions:
+                - condition: template
+                  value_template: "{{ new_status == 'completed' }}"
+              sequence:
+                - service: jotty.check_item
+                  data:
+                    checklist_id: "{{ list_id }}"
+                    item_index: "{{ action_data[1] | int }}"
+            default:
+              - service: jotty.uncheck_item
+                data:
+                  checklist_id: "{{ list_id }}"
+                  item_index: "{{ action_data[1] | int }}"
+          #- delay: "00:00:00.3"
+      - conditions:
+          - condition: template
+            value_template: "{{ action_data | length > 1 and action_data[1] == 'add' }}"
+        sequence:
+          - service: jotty.add_checklist_item
+            data:
+              checklist_id: "{{ list_id }}"
+              text: "{{ action_data[2] }}"
+          #- delay: "00:00:00.5"
+      - conditions:
+          - condition: template
+            value_template: "{{ action_data | length > 1 and action_data[1] == 'delete' }}"
+        sequence:
+          - service: jotty.delete_checklist
+            data:
+              checklist_id: "{{ list_id }}"
+          #- delay: "00:00:00.5"
+    
+    - service: homeassistant.update_entity
+      target:
+        entity_id:
+          - sensor.jotty_total_items
+          - sensor.jotty_completed_items
+    
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.jotty_is_loading
+    
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.jotty_quick_action_data
+      data:
+        value: ""      

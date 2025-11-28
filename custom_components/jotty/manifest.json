@@ -1,0 +1,12 @@
+{
+  "domain": "jotty",
+  "name": "Jotty Notes & Lists",
+  "codeowners": ["@gelatinescreams"],
+  "config_flow": true,
+  "documentation": "https://github.com/gelatinescreams/HA-HACS-Notes-and-Lists-Jotty-integration",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/gelatinescreams/HA-HACS-Notes-and-Lists-Jotty-integration/issues",
+  "requirements": [],
+  "version": "1.7.0"
+}

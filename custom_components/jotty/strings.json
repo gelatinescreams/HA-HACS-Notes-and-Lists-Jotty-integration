@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Jotty Integration",
+        "description": "Enter your Jotty server URL and API key",
+        "data": {
+          "url": "Jotty Server URL (e.g., http://localhost:1122)",
+          "api_key": "API Key (starts with ck_)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Jotty. Please check your URL and API key.",
+      "invalid_auth": "Invalid API key. Please check your credentials.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This Jotty instance is already configured."
+    }
+  }
+}

@@ -1,0 +1,165 @@
+create_note:
+  name: Create Note
+  description: Create a new note in Jotty (automatically set to Home Assistant category)
+  fields:
+    title:
+      name: Title
+      description: The title of the note
+      required: true
+      example: "My New Note"
+      selector:
+        text:
+    content:
+      name: Content
+      description: The content of the note
+      required: false
+      example: "This is my note content"
+      selector:
+        text:
+          multiline: true
+
+update_note:
+  name: Update Note
+  description: Update an existing note in Jotty (keeps Home Assistant category)
+  fields:
+    note_id:
+      name: Note ID
+      description: The UUID of the note to update
+      required: true
+      example: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+      selector:
+        text:
+    title:
+      name: Title
+      description: The new title of the note
+      required: false
+      example: "Updated Note Title"
+      selector:
+        text:
+    content:
+      name: Content
+      description: The new content of the note
+      required: false
+      example: "Updated content"
+      selector:
+        text:
+          multiline: true
+
+delete_note:
+  name: Delete Note
+  description: Delete a note from Jotty
+  fields:
+    note_id:
+      name: Note ID
+      description: The UUID of the note to delete
+      required: true
+      example: "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+      selector:
+        text:
+
+create_checklist:
+  name: Create Checklist
+  description: Create a new checklist in Jotty (automatically set to Home Assistant category)
+  fields:
+    title:
+      name: Title
+      description: The title of the checklist
+      required: true
+      example: "Shopping List"
+      selector:
+        text:
+    type:
+      name: Type
+      description: Type of checklist (simple or task)
+      required: false
+      default: "simple"
+      example: "simple"
+      selector:
+        select:
+          options:
+            - "simple"
+            - "task"
+
+add_checklist_item:
+  name: Add Checklist Item
+  description: Add an item to a checklist
+  fields:
+    checklist_id:
+      name: Checklist ID
+      description: The UUID of the checklist
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    text:
+      name: Item Text
+      description: The text of the item to add
+      required: true
+      example: "Buy milk"
+      selector:
+        text:
+    status:
+      name: Status
+      description: Status for task checklists (in_progress, paused, completed)
+      required: false
+      example: "in_progress"
+      selector:
+        select:
+          options:
+            - "in_progress"
+            - "paused"
+            - "completed"
+
+check_item:
+  name: Check Item
+  description: Mark a checklist item as completed
+  fields:
+    checklist_id:
+      name: Checklist ID
+      description: The UUID of the checklist
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    item_index:
+      name: Item Index
+      description: The index of the item (0-based)
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          mode: box
+
+uncheck_item:
+  name: Uncheck Item
+  description: Mark a checklist item as incomplete
+  fields:
+    checklist_id:
+      name: Checklist ID
+      description: The UUID of the checklist
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    item_index:
+      name: Item Index
+      description: The index of the item (0-based)
+      required: true
+      example: 0
+      selector:
+        number:
+          min: 0
+          mode: box
+
+delete_checklist:
+  name: Delete Checklist
+  description: Delete a checklist from Jotty
+  fields:
+    checklist_id:
+      name: Checklist ID
+      description: The UUID of the checklist to delete
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:

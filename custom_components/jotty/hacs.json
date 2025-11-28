@@ -1,0 +1,5 @@
+{
+  "name": "Jotty Notes & Lists",
+  "render_readme": true,
+  "domains": ["sensor", "todo"]
+}
