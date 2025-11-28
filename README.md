@@ -2,6 +2,8 @@
 
 Home Assistant/HACS integration for Jotty that enables you to manage notes and checklists directly from your Home Assistant dashboard.
 
+![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview.gif)
+
 ### Basically it does this
 
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
