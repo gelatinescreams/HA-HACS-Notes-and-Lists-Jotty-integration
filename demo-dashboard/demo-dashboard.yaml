@@ -590,7 +590,7 @@ views:
               action: call-service
               service: jotty.create_note
               service_data:
-                title: Note: {{ now().strftime('%H:%M') }}
+                title: "Note: {{ now().strftime('%H:%M') }}"
                 content: ''
           - type: button
             name: Reminder
