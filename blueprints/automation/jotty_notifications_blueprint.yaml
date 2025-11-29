@@ -5,13 +5,13 @@ blueprint:
     
     Choose what events to get notified about:
     - New notes created
-    - Notes updated
     - Notes deleted
     - New lists created
     - List items completed
     - Lists deleted
+    - All items in a list completed
     
-    Works with any notification service (mobile app, persistent notification, etc.)
+    Select which mobile device(s) to notify from a dropdown!
   domain: automation
   author: Your Name
   homeassistant:
@@ -22,16 +22,24 @@ blueprint:
       icon: mdi:bell
       description: Configure how and where to send notifications
       input:
-        notification_service:
-          name: Notification Service
-          description: The notification service to use (e.g., notify.mobile_app_your_phone)
+        notification_device:
+          name: Mobile Device
+          description: Select which mobile device to send notifications to
           selector:
-            text:
-          default: "notify.persistent_notification"
+            device:
+              filter:
+                integration: mobile_app
+        
+        use_persistent:
+          name: Also Show in Home Assistant
+          description: Additionally show notifications inside Home Assistant
+          selector:
+            boolean:
+          default: true
         
         notification_title:
           name: Notification Title
-          description: Title for all notifications from this automation
+          description: Title for all notifications
           selector:
             text:
           default: "Jotty Update"
@@ -48,13 +56,6 @@ blueprint:
           selector:
             boolean:
           default: true
-        
-        notify_note_updated:
-          name: Notify on Note Updated
-          description: Get notified when a note is edited
-          selector:
-            boolean:
-          default: false
         
         notify_note_deleted:
           name: Notify on Note Deleted
@@ -101,10 +102,10 @@ mode: queued
 max: 10
 
 variables:
-  notification_service: !input notification_service
+  notification_device: !input notification_device
+  use_persistent: !input use_persistent
   notification_title: !input notification_title
   notify_note_created: !input notify_note_created
-  notify_note_updated: !input notify_note_updated
   notify_note_deleted: !input notify_note_deleted
   notify_list_created: !input notify_list_created
   notify_item_completed: !input notify_item_completed
@@ -125,11 +126,6 @@ triggers:
     id: items_completed
   
   - trigger: state
-    entity_id: 
-      - sensor.jotty_note_*
-    id: note_updated
-  
-  - trigger: state
     entity_id:
       - sensor.jotty_list_*
     id: list_updated
@@ -144,6 +140,7 @@ conditions:
 
 actions:
   - choose:
+
       - conditions:
           - condition: trigger
             id: notes_changed
@@ -152,14 +149,21 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
         sequence:
-          - action: "{{ notification_service }}"
+          - action: notify.mobile_app
+            target:
+              device_id: "{{ notification_device }}"
             data:
               title: "{{ notification_title }}"
-              message: >
-                📝 New note created!
-                
-                Total notes: {{ states('sensor.jotty_total_notes') }}
-      
+              message: "📝 New note created! Total notes: {{ states('sensor.jotty_total_notes') }}"
+          - if:
+              - condition: template
+                value_template: "{{ use_persistent }}"
+            then:
+              - action: notify.persistent_notification
+                data:
+                  title: "{{ notification_title }}"
+                  message: "📝 New note created! Total notes: {{ states('sensor.jotty_total_notes') }}"
+
       - conditions:
           - condition: trigger
             id: notes_changed
@@ -168,13 +172,20 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.state | int < trigger.from_state.state | int }}"
         sequence:
-          - action: "{{ notification_service }}"
+          - action: notify.mobile_app
+            target:
+              device_id: "{{ notification_device }}"
             data:
               title: "{{ notification_title }}"
-              message: >
-                🗑️ Note deleted
-                
-                Total notes: {{ states('sensor.jotty_total_notes') }}
+              message: "🗑️ Note deleted. Total notes: {{ states('sensor.jotty_total_notes') }}"
+          - if:
+              - condition: template
+                value_template: "{{ use_persistent }}"
+            then:
+              - action: notify.persistent_notification
+                data:
+                  title: "{{ notification_title }}"
+                  message: "🗑️ Note deleted. Total notes: {{ states('sensor.jotty_total_notes') }}"
       
       - conditions:
           - condition: trigger
@@ -184,13 +195,20 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
         sequence:
-          - action: "{{ notification_service }}"
+          - action: notify.mobile_app
+            target:
+              device_id: "{{ notification_device }}"
             data:
               title: "{{ notification_title }}"
-              message: >
-                📋 New list created!
-                
-                Total lists: {{ states('sensor.jotty_total_checklists') }}
+              message: "📋 New list created! Total lists: {{ states('sensor.jotty_total_checklists') }}"
+          - if:
+              - condition: template
+                value_template: "{{ use_persistent }}"
+            then:
+              - action: notify.persistent_notification
+                data:
+                  title: "{{ notification_title }}"
+                  message: "📋 New list created! Total lists: {{ states('sensor.jotty_total_checklists') }}"
       
       - conditions:
           - condition: trigger
@@ -200,13 +218,20 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.state | int < trigger.from_state.state | int }}"
         sequence:
-          - action: "{{ notification_service }}"
+          - action: notify.mobile_app
+            target:
+              device_id: "{{ notification_device }}"
             data:
               title: "{{ notification_title }}"
-              message: >
-                🗑️ List deleted
-                
-                Total lists: {{ states('sensor.jotty_total_checklists') }}
+              message: "🗑️ List deleted. Total lists: {{ states('sensor.jotty_total_checklists') }}"
+          - if:
+              - condition: template
+                value_template: "{{ use_persistent }}"
+            then:
+              - action: notify.persistent_notification
+                data:
+                  title: "{{ notification_title }}"
+                  message: "🗑️ List deleted. Total lists: {{ states('sensor.jotty_total_checklists') }}"
       
       - conditions:
           - condition: trigger
@@ -216,14 +241,20 @@ actions:
           - condition: template
             value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
         sequence:
-          - action: "{{ notification_service }}"
+          - action: notify.mobile_app
+            target:
+              device_id: "{{ notification_device }}"
             data:
               title: "{{ notification_title }}"
-              message: >
-                ✅ Item completed!
-                
-                Completed: {{ states('sensor.jotty_completed_items') }} / {{ states('sensor.jotty_total_items') }}
-                ({{ states('sensor.jotty_completion_rate') }}%)
+              message: "✅ Item completed! {{ states('sensor.jotty_completed_items') }}/{{ states('sensor.jotty_total_items') }} ({{ states('sensor.jotty_completion_rate') }}%)"
+          - if:
+              - condition: template
+                value_template: "{{ use_persistent }}"
+            then:
+              - action: notify.persistent_notification
+                data:
+                  title: "{{ notification_title }}"
+                  message: "✅ Item completed! {{ states('sensor.jotty_completed_items') }}/{{ states('sensor.jotty_total_items') }} ({{ states('sensor.jotty_completion_rate') }}%)"
       
       - conditions:
           - condition: trigger
@@ -237,27 +268,17 @@ actions:
               {{ total > 0 and completed == total and 
                  trigger.from_state.attributes.completed | default(0) < total }}
         sequence:
-          - action: "{{ notification_service }}"
+          - action: notify.mobile_app
+            target:
+              device_id: "{{ notification_device }}"
             data:
               title: "{{ notification_title }}"
-              message: >
-                🎉 All done!
-                
-                "{{ trigger.to_state.attributes.title }}" is complete!
-                All {{ trigger.to_state.attributes.total }} items are checked off.
-      
-      - conditions:
-          - condition: trigger
-            id: note_updated
-          - condition: template
-            value_template: "{{ notify_note_updated }}"
-          - condition: template
-            value_template: "{{ trigger.to_state.attributes.content != trigger.from_state.attributes.content }}"
-        sequence:
-          - action: "{{ notification_service }}"
-            data:
-              title: "{{ notification_title }}"
-              message: >
-                📝 Note updated: "{{ trigger.to_state.state }}"
-                
-                {{ trigger.to_state.attributes.content[:100] }}{% if trigger.to_state.attributes.content | length > 100 %}...{% endif %}
+              message: "🎉 All done! \"{{ trigger.to_state.attributes.title }}\" is complete! All {{ trigger.to_state.attributes.total }} items checked off."
+          - if:
+              - condition: template
+                value_template: "{{ use_persistent }}"
+            then:
+              - action: notify.persistent_notification
+                data:
+                  title: "{{ notification_title }}"
+                  message: "🎉 All done! \"{{ trigger.to_state.attributes.title }}\" is complete! All {{ trigger.to_state.attributes.total }} items checked off."
