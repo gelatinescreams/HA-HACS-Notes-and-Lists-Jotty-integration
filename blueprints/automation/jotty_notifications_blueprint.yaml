@@ -1,0 +1,263 @@
+blueprint:
+  name: Jotty Notes & Lists Notifications
+  description: >
+    Get notified when your Jotty notes or lists are updated.
+    
+    Choose what events to get notified about:
+    - New notes created
+    - Notes updated
+    - Notes deleted
+    - New lists created
+    - List items completed
+    - Lists deleted
+    
+    Works with any notification service (mobile app, persistent notification, etc.)
+  domain: automation
+  author: Your Name
+  homeassistant:
+    min_version: 2024.1.0
+  input:
+    notification_section:
+      name: Notification Settings
+      icon: mdi:bell
+      description: Configure how and where to send notifications
+      input:
+        notification_service:
+          name: Notification Service
+          description: The notification service to use (e.g., notify.mobile_app_your_phone)
+          selector:
+            text:
+          default: "notify.persistent_notification"
+        
+        notification_title:
+          name: Notification Title
+          description: Title for all notifications from this automation
+          selector:
+            text:
+          default: "Jotty Update"
+    
+    note_events_section:
+      name: Note Events
+      icon: mdi:note-text
+      description: Choose which note events trigger notifications
+      collapsed: true
+      input:
+        notify_note_created:
+          name: Notify on New Note
+          description: Get notified when a new note is created
+          selector:
+            boolean:
+          default: true
+        
+        notify_note_updated:
+          name: Notify on Note Updated
+          description: Get notified when a note is edited
+          selector:
+            boolean:
+          default: false
+        
+        notify_note_deleted:
+          name: Notify on Note Deleted
+          description: Get notified when a note is deleted
+          selector:
+            boolean:
+          default: false
+    
+    list_events_section:
+      name: List Events
+      icon: mdi:format-list-checks
+      description: Choose which list events trigger notifications
+      collapsed: true
+      input:
+        notify_list_created:
+          name: Notify on New List
+          description: Get notified when a new list is created
+          selector:
+            boolean:
+          default: true
+        
+        notify_item_completed:
+          name: Notify on Item Completed
+          description: Get notified when a list item is checked off
+          selector:
+            boolean:
+          default: false
+        
+        notify_list_deleted:
+          name: Notify on List Deleted
+          description: Get notified when a list is deleted
+          selector:
+            boolean:
+          default: false
+        
+        notify_all_items_done:
+          name: Notify When All Items Complete
+          description: Get notified when all items in a list are completed
+          selector:
+            boolean:
+          default: true
+
+mode: queued
+max: 10
+
+variables:
+  notification_service: !input notification_service
+  notification_title: !input notification_title
+  notify_note_created: !input notify_note_created
+  notify_note_updated: !input notify_note_updated
+  notify_note_deleted: !input notify_note_deleted
+  notify_list_created: !input notify_list_created
+  notify_item_completed: !input notify_item_completed
+  notify_list_deleted: !input notify_list_deleted
+  notify_all_items_done: !input notify_all_items_done
+
+triggers:
+  - trigger: state
+    entity_id: sensor.jotty_total_notes
+    id: notes_changed
+  
+  - trigger: state
+    entity_id: sensor.jotty_total_checklists
+    id: lists_changed
+  
+  - trigger: state
+    entity_id: sensor.jotty_completed_items
+    id: items_completed
+  
+  - trigger: state
+    entity_id: 
+      - sensor.jotty_note_*
+    id: note_updated
+  
+  - trigger: state
+    entity_id:
+      - sensor.jotty_list_*
+    id: list_updated
+
+conditions:
+  - condition: template
+    value_template: >
+      {{ trigger.from_state is not none and 
+         trigger.to_state is not none and
+         trigger.from_state.state != 'unavailable' and
+         trigger.to_state.state != 'unavailable' }}
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: notes_changed
+          - condition: template
+            value_template: "{{ notify_note_created }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                📝 New note created!
+                
+                Total notes: {{ states('sensor.jotty_total_notes') }}
+      
+      - conditions:
+          - condition: trigger
+            id: notes_changed
+          - condition: template
+            value_template: "{{ notify_note_deleted }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state | int < trigger.from_state.state | int }}"
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                🗑️ Note deleted
+                
+                Total notes: {{ states('sensor.jotty_total_notes') }}
+      
+      - conditions:
+          - condition: trigger
+            id: lists_changed
+          - condition: template
+            value_template: "{{ notify_list_created }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                📋 New list created!
+                
+                Total lists: {{ states('sensor.jotty_total_checklists') }}
+      
+      - conditions:
+          - condition: trigger
+            id: lists_changed
+          - condition: template
+            value_template: "{{ notify_list_deleted }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state | int < trigger.from_state.state | int }}"
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                🗑️ List deleted
+                
+                Total lists: {{ states('sensor.jotty_total_checklists') }}
+      
+      - conditions:
+          - condition: trigger
+            id: items_completed
+          - condition: template
+            value_template: "{{ notify_item_completed }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.state | int > trigger.from_state.state | int }}"
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                ✅ Item completed!
+                
+                Completed: {{ states('sensor.jotty_completed_items') }} / {{ states('sensor.jotty_total_items') }}
+                ({{ states('sensor.jotty_completion_rate') }}%)
+      
+      - conditions:
+          - condition: trigger
+            id: list_updated
+          - condition: template
+            value_template: "{{ notify_all_items_done }}"
+          - condition: template
+            value_template: >
+              {% set total = trigger.to_state.attributes.total | default(0) %}
+              {% set completed = trigger.to_state.attributes.completed | default(0) %}
+              {{ total > 0 and completed == total and 
+                 trigger.from_state.attributes.completed | default(0) < total }}
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                🎉 All done!
+                
+                "{{ trigger.to_state.attributes.title }}" is complete!
+                All {{ trigger.to_state.attributes.total }} items are checked off.
+      
+      - conditions:
+          - condition: trigger
+            id: note_updated
+          - condition: template
+            value_template: "{{ notify_note_updated }}"
+          - condition: template
+            value_template: "{{ trigger.to_state.attributes.content != trigger.from_state.attributes.content }}"
+        sequence:
+          - action: "{{ notification_service }}"
+            data:
+              title: "{{ notification_title }}"
+              message: >
+                📝 Note updated: "{{ trigger.to_state.state }}"
+                
+                {{ trigger.to_state.attributes.content[:100] }}{% if trigger.to_state.attributes.content | length > 100 %}...{% endif %}
