@@ -16,17 +16,17 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 ### Requirements
 
 - **Home Assistant**: Version 2024.1.0 or newer
-- **Jotty**: A running Jotty instance
-- **API Key**: Valid Jotty API key with read/write permissions
+- **Jotty**: A running [Jotty](https://github.com/fccview/jottyinstance)
+- **API Key**: Valid [Jotty](https://github.com/fccview/jottyinstance) API key with read/write permissions
 - **HACS**: Home Assistant Community Store for easy installation and updates
 - **File Editor**: Studio Code Server or File Editor addon for configuration
 - **Lovelace UI**: Standard Home Assistant frontend
 
 ### Before You Begin
 
-You must create a category named "Home Assistant" in your Jotty application:
+You must create a category named "Home Assistant" in your [Jotty](https://github.com/fccview/jottyinstance) application:
 
-1. Open Jotty on mobile or desktop
+1. Open [Jotty](https://github.com/fccview/jottyinstance) on mobile or desktop
 2. Go to Notes section
 3. Create a new category called "Home Assistant"
 4. Go to Lists section
