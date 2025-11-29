@@ -38,6 +38,10 @@ This category is REQUIRED for the integration to work. All notes and lists creat
 
 Complete instructions are available in the [Jotty: Notes and lists for Home Assistant Installation Guide](INSTALLATION.md).
 
+## Notification blueprint
+*a ready made notficiation blueprint for this integration is available below*
+[![Notification blueprint](https://community-assets.home-assistant.io/original/4X/d/7/6/d7625545838a4970873f3a996172212440b7e0ae.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/gelatinescreams/HA-HACS-Notes-and-Lists-Jotty-integration/refs/heads/main/blueprints/automation/jotty_notifications_blueprint.yaml)
+
 ## Usage
 
 ### Creating Notes
