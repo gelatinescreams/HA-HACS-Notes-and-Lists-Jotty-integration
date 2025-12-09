@@ -14,7 +14,7 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 
 ### Basically it does this
 
-- **NEW!! 2.0 : Tasklist Support**: Create and manage both task lists
+- **NEW!! 2.0 : Tasklist Support**: Create and manage task lists!
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
 - **Checklist Support**: Create and manage simple checklists
 - **Real Time Synchronization**: Changes sync with your Jotty server automatically
