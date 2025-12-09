@@ -2,13 +2,15 @@
 
 Home Assistant/HACS integration for Jotty that enables you to manage notes and checklists directly from your Home Assistant dashboard.
 
-![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview.gif)
-
 ### 2.0 12/9/25 Merry Xmas
 - **Task lists have been added!**: Create, edit, and delete task lists from Home Assistant
 - Create, edit, delete custom tasks statuses
 - Create sub tasks for task items
 - All tasks and items are imported as their own individual sensor
+
+![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview-tasks.gif)
+![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview.gif)
+
 
 ### Basically it does this
 
