@@ -18,7 +18,7 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
 - **Checklist Support**: Create and manage simple checklists
 - **Real Time Synchronization**: Changes sync with your Jotty server automatically
-- **Granule Notifications**: Every note, list and item is imported as an entity, giving you control over every detail
+- **Granule Notifications**: Every note, list and item is imported as a sensor, giving you control over every detail
 - **Demo Dashboard**: Pre built Lovelace dashboard with full functionality included
 - **Statistics Tracking**: Monitor note counts, list, task completion rates, and more
 
