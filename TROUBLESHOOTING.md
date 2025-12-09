@@ -33,7 +33,7 @@ If the integration connects but shows no data:
 
 If scripts or dashboard fail:
 
-1. Verify all 20 helpers are created
+1. Verify all helpers are created
 2. Check entity IDs match exactly
 3. Use Settings > Devices & Services > Helpers to verify
 4. Recreate any missing helpers

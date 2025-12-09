@@ -226,8 +226,6 @@ views:
             entities:
               - entity: input_text.jotty_checklist_title
                 name: Title
-              - entity: input_select.jotty_checklist_type
-                name: Type
             footer:
               type: buttons
               entities:
@@ -300,16 +298,6 @@ views:
                 .item-checkbox:disabled { cursor: wait; }
                 .item-text { flex-grow: 1; color: var(--primary-text-color); font-size: 1em; }
                 .item-text.completed { text-decoration: line-through; opacity: 0.6; }
-                .item-status-select {
-                  padding: 4px 8px;
-                  border-radius: 4px;
-                  border: 1px solid var(--divider-color);
-                  background: var(--card-background-color);
-                  color: var(--primary-text-color);
-                  font-size: 0.9em;
-                  cursor: pointer;
-                }
-                .item-status-select:disabled { cursor: wait; }
                 .add-item-section {
                   margin-top: 16px;
                   padding-top: 12px;
@@ -365,7 +353,10 @@ views:
                 {% set ns = namespace(count=0, lists=[]) %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty List:') and state.state != 'unavailable' %}
-                    {% set ns.lists = ns.lists + [state] %}
+                    {% set list_type = state_attr(state.entity_id, 'type') %}
+                    {% if list_type != 'task' %}
+                      {% set ns.lists = ns.lists + [state] %}
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
                 {% for state in ns.lists | sort(attribute='attributes.updated', reverse=true) %}
@@ -373,7 +364,6 @@ views:
                   {% if ns.count is odd %}
                     {% set list_id = state_attr(state.entity_id, 'checklist_id') %}
                     {% set list_title = state_attr(state.entity_id, 'title') %}
-                    {% set list_type = state_attr(state.entity_id, 'type') %}
                     {% set items = state_attr(state.entity_id, 'items') or [] %}
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
@@ -387,14 +377,7 @@ views:
                           <div class="list-item">
                             <input type="checkbox" class="item-checkbox" {{ 'checked' if item.completed else '' }} onchange="(function(cb){cb.disabled=true;cb.parentElement.style.opacity='0.5';const act=cb.checked?'check':'uncheck';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||{{ loop.index0 }}|||'+act});}setTimeout(function(){cb.disabled=false;cb.parentElement.style.opacity='1';},1000);})(this);">
                             <span class="item-text {{ 'completed' if item.completed else '' }}">{{ item.text }}</span>
-                            {% if list_type == 'task' %}
-                              <select class="item-status-select" onchange="(function(sel){sel.disabled=true;sel.parentElement.style.opacity='0.5';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||{{ loop.index0 }}|||status|||'+sel.value});}setTimeout(function(){sel.disabled=false;sel.parentElement.style.opacity='1';},1000);})(this);">
-                                <option value="todo" {{ 'selected' if item.get('status') == 'todo' else '' }}>To Do</option>
-                                <option value="in_progress" {{ 'selected' if item.get('status') == 'in_progress' else '' }}>In Progress</option>
-                                <option value="paused" {{ 'selected' if item.get('status') == 'paused' else '' }}>Paused</option>
-                                <option value="completed" {{ 'selected' if item.get('status') == 'completed' else '' }}>Completed</option>
-                              </select>
-                            {% endif %}
+                            <button style="padding:2px 8px;background:var(--error-color,#ff5555);color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.8em;" onclick="if(confirm('Delete this item?')){(function(btn){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_delete_item_data',value:'{{ list_id }}|||{{ loop.index0 }}'});}})(this);}">🗑️</button>
                           </div>
                         {% endfor %}
                       </div>
@@ -454,16 +437,6 @@ views:
                 .item-checkbox:disabled { cursor: wait; }
                 .item-text { flex-grow: 1; color: var(--primary-text-color); font-size: 1em; }
                 .item-text.completed { text-decoration: line-through; opacity: 0.6; }
-                .item-status-select {
-                  padding: 4px 8px;
-                  border-radius: 4px;
-                  border: 1px solid var(--divider-color);
-                  background: var(--card-background-color);
-                  color: var(--primary-text-color);
-                  font-size: 0.9em;
-                  cursor: pointer;
-                }
-                .item-status-select:disabled { cursor: wait; }
                 .add-item-section {
                   margin-top: 16px;
                   padding-top: 12px;
@@ -505,7 +478,10 @@ views:
                 {% set ns = namespace(count=0, lists=[]) %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty List:') and state.state != 'unavailable' %}
-                    {% set ns.lists = ns.lists + [state] %}
+                    {% set list_type = state_attr(state.entity_id, 'type') %}
+                    {% if list_type != 'task' %}
+                      {% set ns.lists = ns.lists + [state] %}
+                    {% endif %}
                   {% endif %}
                 {% endfor %}
                 {% for state in ns.lists | sort(attribute='attributes.updated', reverse=true) %}
@@ -513,7 +489,6 @@ views:
                   {% if ns.count is even %}
                     {% set list_id = state_attr(state.entity_id, 'checklist_id') %}
                     {% set list_title = state_attr(state.entity_id, 'title') %}
-                    {% set list_type = state_attr(state.entity_id, 'type') %}
                     {% set items = state_attr(state.entity_id, 'items') or [] %}
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
@@ -527,14 +502,7 @@ views:
                           <div class="list-item">
                             <input type="checkbox" class="item-checkbox" {{ 'checked' if item.completed else '' }} onchange="(function(cb){cb.disabled=true;cb.parentElement.style.opacity='0.5';const act=cb.checked?'check':'uncheck';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||{{ loop.index0 }}|||'+act});}setTimeout(function(){cb.disabled=false;cb.parentElement.style.opacity='1';},1000);})(this);">
                             <span class="item-text {{ 'completed' if item.completed else '' }}">{{ item.text }}</span>
-                            {% if list_type == 'task' %}
-                              <select class="item-status-select" onchange="(function(sel){sel.disabled=true;sel.parentElement.style.opacity='0.5';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||{{ loop.index0 }}|||status|||'+sel.value});}setTimeout(function(){sel.disabled=false;sel.parentElement.style.opacity='1';},1000);})(this);">
-                                <option value="todo" {{ 'selected' if item.get('status') == 'todo' else '' }}>To Do</option>
-                                <option value="in_progress" {{ 'selected' if item.get('status') == 'in_progress' else '' }}>In Progress</option>
-                                <option value="paused" {{ 'selected' if item.get('status') == 'paused' else '' }}>Paused</option>
-                                <option value="completed" {{ 'selected' if item.get('status') == 'completed' else '' }}>Completed</option>
-                              </select>
-                            {% endif %}
+                            <button style="padding:2px 8px;background:var(--error-color,#ff5555);color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.8em;" onclick="if(confirm('Delete this item?')){(function(btn){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_delete_item_data',value:'{{ list_id }}|||{{ loop.index0 }}'});}})(this);}">🗑️</button>
                           </div>
                         {% endfor %}
                       </div>
@@ -542,6 +510,408 @@ views:
                         <input type="text" class="add-item-input" placeholder="Add new item...">
                         <button class="add-item-btn" onclick="(function(btn){const inp=btn.previousElementSibling;if(!inp.value.trim()){inp.placeholder='Type something first!';setTimeout(function(){inp.placeholder='Add new item...';},2000);return;}const txt=inp.value.trim();inp.value='';inp.placeholder='Adding...';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||add|||'+txt});}setTimeout(function(){inp.placeholder='Add new item...';btn.disabled=false;},2000);})(this);">➕ Add</button>
                         <button class="delete-list-btn" onclick="if(confirm('Delete {{ list_title }}?')){(function(btn){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||delete'});}})(this);}">🗑️</button>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+  - title: Tasks
+    path: tasks
+    icon: mdi:clipboard-list
+    sections:
+      - type: grid
+        cards:
+          - type: entities
+            title: New Task List
+            entities:
+              - entity: input_text.jotty_task_title
+                name: Title
+            footer:
+              type: buttons
+              entities:
+                - entity: script.jotty_create_task
+                  name: Create
+                  icon: mdi:plus-circle
+            grid_options:
+              columns: full
+              rows: auto
+      - type: grid
+        cards:
+          - type: custom:html-template-card
+            ignore_line_breaks: true
+            content: |
+              <style>
+                @keyframes slideDown { from {top:40px;opacity:0;} to {top:60px;opacity:1;} }
+                #jotty-loading-tasks {
+                  display:none;
+                  position:fixed;
+                  top:60px;
+                  left:50%;
+                  transform:translateX(-50%);
+                  z-index:9999;
+                  background:#9C27B0;
+                  color:white;
+                  padding:12px 24px;
+                  border-radius:8px;
+                  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+                  font-weight:600;
+                  animation:slideDown 0.3s ease;
+                }
+                .tasks-container { padding: 4px; }
+                .task-card {
+                  background: var(--ha-card-background, var(--card-background-color, white));
+                  border: 1px solid var(--divider-color, #e0e0e0);
+                  border-radius: 12px;
+                  padding: 16px;
+                  margin-bottom: 20px;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                .task-header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 12px;
+                  padding-bottom: 12px;
+                  border-bottom: 2px solid #9C27B0;
+                }
+                .task-title { font-size: 1.4em; font-weight: 600; color: var(--primary-text-color); }
+                .task-progress {
+                  font-size: 0.9em;
+                  background: #9C27B0;
+                  color: white;
+                  padding: 4px 12px;
+                  border-radius: 12px;
+                }
+                .task-items { margin-top: 12px; }
+                .task-item {
+                  display: flex;
+                  align-items: center;
+                  padding: 8px;
+                  margin-bottom: 4px;
+                  background: var(--secondary-background-color, #f5f5f5);
+                  border-radius: 8px;
+                  gap: 8px;
+                }
+                .task-item:hover { background: var(--divider-color, #e0e0e0); }
+                .task-item.depth-1 { margin-left: 24px; border-left: 3px solid #673AB7; }
+                .task-item.depth-2 { margin-left: 48px; border-left: 3px solid #9575CD; }
+                .task-item.depth-3 { margin-left: 72px; border-left: 3px solid #B39DDB; }
+                .task-item-text { flex-grow: 1; color: var(--primary-text-color); font-size: 1em; }
+                .task-item-text.completed { text-decoration: line-through; opacity: 0.6; }
+                .task-status-select {
+                  padding: 4px 8px;
+                  border-radius: 4px;
+                  border: 1px solid var(--divider-color);
+                  background: var(--card-background-color);
+                  color: var(--primary-text-color);
+                  font-size: 0.85em;
+                  cursor: pointer;
+                }
+                .delete-item-btn {
+                  padding: 2px 8px;
+                  background: var(--error-color, #ff5555);
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 0.8em;
+                }
+                .add-sub-btn {
+                  padding: 2px 6px;
+                  background: #673AB7;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 0.75em;
+                }
+                .add-task-section {
+                  margin-top: 16px;
+                  padding-top: 12px;
+                  border-top: 1px solid var(--divider-color);
+                  display: flex;
+                  gap: 8px;
+                  flex-wrap: wrap;
+                }
+                .add-task-input {
+                  flex-grow: 1;
+                  min-width: 150px;
+                  padding: 8px 12px;
+                  border: 1px solid var(--divider-color);
+                  border-radius: 4px;
+                  background: var(--card-background-color);
+                  color: var(--primary-text-color);
+                }
+                .add-task-btn {
+                  padding: 8px 16px;
+                  background: #9C27B0;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                }
+                .delete-task-btn {
+                  padding: 4px 12px;
+                  background: var(--error-color, #ff5555);
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                }
+                .kanban-btn {
+                  padding: 4px 12px;
+                  background: #673AB7;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                }
+                .status-todo { border-left: 3px solid #ff9800; }
+                .status-in_progress { border-left: 3px solid #2196F3; }
+                .status-completed { border-left: 3px solid #4CAF50; }
+                .status-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: var(--secondary-background-color);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .status-section.show { display: block; }
+                .status-list { margin: 8px 0; }
+                .status-item {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  padding: 6px;
+                  background: var(--card-background-color);
+                  border-radius: 4px;
+                  margin-bottom: 4px;
+                }
+                .status-color {
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 4px;
+                  flex-shrink: 0;
+                }
+                .status-name { flex-grow: 1; font-weight: 500; }
+                .status-id { font-size: 0.8em; color: var(--secondary-text-color); }
+                .new-status-form {
+                  display: flex;
+                  gap: 8px;
+                  flex-wrap: wrap;
+                  margin-top: 8px;
+                  padding-top: 8px;
+                  border-top: 1px solid var(--divider-color);
+                }
+                .new-status-form input {
+                  padding: 6px 10px;
+                  border: 1px solid var(--divider-color);
+                  border-radius: 4px;
+                  background: var(--card-background-color);
+                  color: var(--primary-text-color);
+                }
+                .new-status-form input[type="color"] {
+                  width: 40px;
+                  padding: 2px;
+                }
+              </style>
+              <div id="jotty-loading-tasks">⏳ Processing...</div>
+              <script>
+                (function checkLoading(){
+                  var banner=document.getElementById('jotty-loading-tasks');
+                  if(banner){
+                    var el=document.querySelector('home-assistant');
+                    if(el&&el.hass&&el.hass.states['input_boolean.jotty_is_loading']){
+                      banner.style.display=el.hass.states['input_boolean.jotty_is_loading'].state==='on'?'block':'none';
+                    }
+                  }
+                  setTimeout(checkLoading,300);
+                })();
+              </script>
+              <div class="tasks-container">
+                {% set ns = namespace(count=0, tasks=[]) %}
+                {% for state in states.sensor %}
+                  {% if state.name.startswith('Jotty Task:') and state.state != 'unavailable' %}
+                    {% set ns.tasks = ns.tasks + [state] %}
+                  {% endif %}
+                {% endfor %}
+                {% for state in ns.tasks | sort(attribute='attributes.updated', reverse=true) %}
+                  {% set ns.count = ns.count + 1 %}
+                  {% if ns.count is odd %}
+                    {% set task_id = state_attr(state.entity_id, 'task_id') %}
+                    {% set task_title = state_attr(state.entity_id, 'title') %}
+                    {% set flat_items = state_attr(state.entity_id, 'flat_items') or [] %}
+                    {% set statuses = state_attr(state.entity_id, 'statuses') or [{'id':'todo','name':'To Do','order':0},{'id':'in_progress','name':'In Progress','order':1},{'id':'completed','name':'Completed','order':2}] %}
+                    {% set completed = state_attr(state.entity_id, 'completed') %}
+                    {% set total = state_attr(state.entity_id, 'total') %}
+                    <div class="task-card">
+                      <div class="task-header">
+                        <div class="task-title">{{ task_title }}</div>
+                        <div class="task-progress">{{ completed }}/{{ total }}</div>
+                      </div>
+                      <div class="task-items">
+                        {% for item in flat_items %}
+                          {% set index_path = item.index_path | default('0') %}
+                          {% set depth = index_path.split('.') | length - 1 %}
+                          <div class="task-item depth-{{ depth }} status-{{ item.status }}">
+                            <span class="task-item-text {{ 'completed' if item.status == 'completed' else '' }}">{{ item.text }}</span>
+                            <select class="task-status-select" onchange="(function(sel){sel.disabled=true;sel.parentElement.style.opacity='0.5';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||{{ index_path }}|||status|||'+sel.value});}setTimeout(function(){sel.disabled=false;sel.parentElement.style.opacity='1';},1000);})(this);">
+                              {% for status in statuses | sort(attribute='order') %}
+                                <option value="{{ status.id }}" {{ 'selected' if item.status == status.id else '' }}>{{ status.name }}</option>
+                              {% endfor %}
+                            </select>
+                            <button class="add-sub-btn" title="Add sub-task" onclick="(function(btn){const txt=prompt('Enter sub-task:');if(txt&&txt.trim()){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt.trim()+'|||todo|||{{ index_path }}'});}}})(this);">➕</button>
+                            <button class="delete-item-btn" onclick="if(confirm('Delete?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||{{ index_path }}|||delete_item'});}}">🗑️</button>
+                          </div>
+                        {% endfor %}
+                      </div>
+                      <div class="add-task-section">
+                        <input type="text" class="add-task-input" placeholder="Add new task...">
+                        <select class="task-status-select" style="min-width:100px;">
+                          {% for status in statuses | sort(attribute='order') %}
+                            <option value="{{ status.id }}">{{ status.name }}</option>
+                          {% endfor %}
+                        </select>
+                        <button class="add-task-btn" onclick="(function(btn){const inp=btn.parentElement.querySelector('.add-task-input');const sel=btn.parentElement.querySelector('.task-status-select');if(!inp.value.trim())return;const txt=inp.value.trim();const st=sel.value;inp.value='';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt+'|||'+st});}setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add</button>
+                        <button class="kanban-btn" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.status-section');if(panel){panel.classList.toggle('show');}})(this);">⚙️ Columns</button>
+                        <button class="delete-task-btn" onclick="if(confirm('Delete {{ task_title }}?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||delete'});}}">🗑️</button>
+                      </div>
+                      <div class="status-section">
+                        <strong>📊 Kanban Columns</strong>
+                        <div class="status-list">
+                          {% for status in statuses | sort(attribute='order') %}
+                            <div class="status-item">
+                              <div class="status-color" style="background:{{ status.color if status.color else '#888' }};"></div>
+                              <span class="status-name">{{ status.name }}</span>
+                              <span class="status-id">({{ status.id }})</span>
+                              <button style="padding:2px 6px;background:#ff9800;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.75em;" onclick="(function(btn){const newLabel=prompt('New label:','{{ status.name }}');if(newLabel&&newLabel.trim()){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'update_status|||{{ task_id }}|||{{ status.id }}|||'+newLabel.trim()});}}})(this);">✏️</button>
+                              {% if statuses | length > 1 %}
+                              <button style="padding:2px 6px;background:var(--error-color);color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.75em;" onclick="if(confirm('Delete {{ status.name }}?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'delete_status|||{{ task_id }}|||{{ status.id }}'});}}">🗑️</button>
+                              {% endif %}
+                            </div>
+                          {% endfor %}
+                        </div>
+                        <div class="new-status-form">
+                          <input type="text" placeholder="ID (e.g. review)" style="width:100px;" class="new-status-id">
+                          <input type="text" placeholder="Label" style="width:120px;" class="new-status-label">
+                          <input type="color" value="#3b82f6" class="new-status-color">
+                          <button class="add-task-btn" style="padding:6px 12px;" onclick="(function(btn){const form=btn.closest('.new-status-form');const idInp=form.querySelector('.new-status-id');const labelInp=form.querySelector('.new-status-label');const colorInp=form.querySelector('.new-status-color');if(!idInp.value.trim()||!labelInp.value.trim()){alert('ID and Label required');return;}btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'create_status|||{{ task_id }}|||'+idInp.value.trim()+'|||'+labelInp.value.trim()+'|||'+colorInp.value});}idInp.value='';labelInp.value='';setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add Column</button>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+      - type: grid
+        cards:
+          - type: custom:html-template-card
+            ignore_line_breaks: true
+            content: |
+              <style>
+                .tasks-container { padding: 4px; }
+                .task-card { background: var(--ha-card-background); border: 1px solid var(--divider-color); border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #9C27B0; }
+                .task-title { font-size: 1.4em; font-weight: 600; }
+                .task-progress { font-size: 0.9em; background: #9C27B0; color: white; padding: 4px 12px; border-radius: 12px; }
+                .task-items { margin-top: 12px; }
+                .task-item { display: flex; align-items: center; padding: 8px; margin-bottom: 4px; background: var(--secondary-background-color); border-radius: 8px; gap: 8px; }
+                .task-item:hover { background: var(--divider-color); }
+                .task-item.depth-1 { margin-left: 24px; border-left: 3px solid #673AB7; }
+                .task-item.depth-2 { margin-left: 48px; border-left: 3px solid #9575CD; }
+                .task-item.depth-3 { margin-left: 72px; border-left: 3px solid #B39DDB; }
+                .task-item-text { flex-grow: 1; }
+                .task-item-text.completed { text-decoration: line-through; opacity: 0.6; }
+                .task-status-select { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.85em; cursor: pointer; }
+                .delete-item-btn { padding: 2px 8px; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
+                .add-sub-btn { padding: 2px 6px; background: #673AB7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em; }
+                .add-task-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--divider-color); display: flex; gap: 8px; flex-wrap: wrap; }
+                .add-task-input { flex-grow: 1; min-width: 150px; padding: 8px 12px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); }
+                .add-task-btn { padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .delete-task-btn { padding: 4px 12px; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .kanban-btn { padding: 4px 12px; background: #673AB7; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .status-todo { border-left: 3px solid #ff9800; }
+                .status-in_progress { border-left: 3px solid #2196F3; }
+                .status-completed { border-left: 3px solid #4CAF50; }
+                .status-section { margin-top: 12px; padding: 12px; background: var(--secondary-background-color); border-radius: 8px; display: none; }
+                .status-section.show { display: block; }
+                .status-list { margin: 8px 0; }
+                .status-item { display: flex; align-items: center; gap: 8px; padding: 6px; background: var(--card-background-color); border-radius: 4px; margin-bottom: 4px; }
+                .status-color { width: 20px; height: 20px; border-radius: 4px; }
+                .status-name { flex-grow: 1; font-weight: 500; }
+                .status-id { font-size: 0.8em; color: var(--secondary-text-color); }
+                .new-status-form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider-color); }
+                .new-status-form input { padding: 6px 10px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); }
+                .new-status-form input[type="color"] { width: 40px; padding: 2px; }
+              </style>
+              <div class="tasks-container">
+                {% set ns = namespace(count=0, tasks=[]) %}
+                {% for state in states.sensor %}
+                  {% if state.name.startswith('Jotty Task:') and state.state != 'unavailable' %}
+                    {% set ns.tasks = ns.tasks + [state] %}
+                  {% endif %}
+                {% endfor %}
+                {% for state in ns.tasks | sort(attribute='attributes.updated', reverse=true) %}
+                  {% set ns.count = ns.count + 1 %}
+                  {% if ns.count is even %}
+                    {% set task_id = state_attr(state.entity_id, 'task_id') %}
+                    {% set task_title = state_attr(state.entity_id, 'title') %}
+                    {% set flat_items = state_attr(state.entity_id, 'flat_items') or [] %}
+                    {% set statuses = state_attr(state.entity_id, 'statuses') or [{'id':'todo','name':'To Do','order':0},{'id':'in_progress','name':'In Progress','order':1},{'id':'completed','name':'Completed','order':2}] %}
+                    {% set completed = state_attr(state.entity_id, 'completed') %}
+                    {% set total = state_attr(state.entity_id, 'total') %}
+                    <div class="task-card">
+                      <div class="task-header">
+                        <div class="task-title">{{ task_title }}</div>
+                        <div class="task-progress">{{ completed }}/{{ total }}</div>
+                      </div>
+                      <div class="task-items">
+                        {% for item in flat_items %}
+                          {% set index_path = item.index_path | default('0') %}
+                          {% set depth = index_path.split('.') | length - 1 %}
+                          <div class="task-item depth-{{ depth }} status-{{ item.status }}">
+                            <span class="task-item-text {{ 'completed' if item.status == 'completed' else '' }}">{{ item.text }}</span>
+                            <select class="task-status-select" onchange="(function(sel){sel.disabled=true;sel.parentElement.style.opacity='0.5';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||{{ index_path }}|||status|||'+sel.value});}})(this);">
+                              {% for status in statuses | sort(attribute='order') %}
+                                <option value="{{ status.id }}" {{ 'selected' if item.status == status.id else '' }}>{{ status.name }}</option>
+                              {% endfor %}
+                            </select>
+                            <button class="add-sub-btn" title="Add sub-task" onclick="(function(btn){const txt=prompt('Enter sub-task:');if(txt&&txt.trim()){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt.trim()+'|||todo|||{{ index_path }}'});}}})(this);">➕</button>
+                            <button class="delete-item-btn" onclick="if(confirm('Delete?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||{{ index_path }}|||delete_item'});}}">🗑️</button>
+                          </div>
+                        {% endfor %}
+                      </div>
+                      <div class="add-task-section">
+                        <input type="text" class="add-task-input" placeholder="Add new task...">
+                        <select class="task-status-select" style="min-width:100px;">
+                          {% for status in statuses | sort(attribute='order') %}
+                            <option value="{{ status.id }}">{{ status.name }}</option>
+                          {% endfor %}
+                        </select>
+                        <button class="add-task-btn" onclick="(function(btn){const inp=btn.parentElement.querySelector('.add-task-input');const sel=btn.parentElement.querySelector('.task-status-select');if(!inp.value.trim())return;const txt=inp.value.trim();const st=sel.value;inp.value='';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt+'|||'+st});}setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add</button>
+                        <button class="kanban-btn" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.status-section');if(panel){panel.classList.toggle('show');}})(this);">⚙️ Columns</button>
+                        <button class="delete-task-btn" onclick="if(confirm('Delete {{ task_title }}?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||delete'});}}">🗑️</button>
+                      </div>
+                      <div class="status-section">
+                        <strong>📊 Kanban Columns</strong>
+                        <div class="status-list">
+                          {% for status in statuses | sort(attribute='order') %}
+                            <div class="status-item">
+                              <div class="status-color" style="background:{{ status.color if status.color else '#888' }};"></div>
+                              <span class="status-name">{{ status.name }}</span>
+                              <span class="status-id">({{ status.id }})</span>
+                              <button style="padding:2px 6px;background:#ff9800;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.75em;" onclick="(function(btn){const newLabel=prompt('New label:','{{ status.name }}');if(newLabel&&newLabel.trim()){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'update_status|||{{ task_id }}|||{{ status.id }}|||'+newLabel.trim()});}}})(this);">✏️</button>
+                              {% if statuses | length > 1 %}
+                              <button style="padding:2px 6px;background:var(--error-color);color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.75em;" onclick="if(confirm('Delete {{ status.name }}?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'delete_status|||{{ task_id }}|||{{ status.id }}'});}}">🗑️</button>
+                              {% endif %}
+                            </div>
+                          {% endfor %}
+                        </div>
+                        <div class="new-status-form">
+                          <input type="text" placeholder="ID (e.g. review)" style="width:100px;" class="new-status-id">
+                          <input type="text" placeholder="Label" style="width:120px;" class="new-status-label">
+                          <input type="color" value="#3b82f6" class="new-status-color">
+                          <button class="add-task-btn" style="padding:6px 12px;" onclick="(function(btn){const form=btn.closest('.new-status-form');const idInp=form.querySelector('.new-status-id');const labelInp=form.querySelector('.new-status-label');const colorInp=form.querySelector('.new-status-color');if(!idInp.value.trim()||!labelInp.value.trim()){alert('ID and Label required');return;}btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'create_status|||{{ task_id }}|||'+idInp.value.trim()+'|||'+labelInp.value.trim()+'|||'+colorInp.value});}idInp.value='';labelInp.value='';setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add Column</button>
+                        </div>
                       </div>
                     </div>
                   {% endif %}
@@ -579,10 +949,9 @@ views:
             icon: mdi:calendar-today
             tap_action:
               action: call-service
-              service: jotty.create_checklist
+              service: jotty.create_task
               service_data:
                 title: '{{ now().strftime(''%A'') }} Tasks'
-                type: task
           - type: button
             name: Quick Note
             icon: mdi:note-plus
@@ -590,7 +959,7 @@ views:
               action: call-service
               service: jotty.create_note
               service_data:
-                title: "Note: {{ now().strftime('%H:%M') }}"
+                title: 'Note: {{ now().strftime(''%H:%M'') }}'
                 content: ''
           - type: button
             name: Reminder
@@ -623,6 +992,14 @@ views:
                 title: Packing List
                 type: simple
           - type: button
+            name: New Task List
+            icon: mdi:clipboard-plus
+            tap_action:
+              action: call-service
+              service: jotty.create_task
+              service_data:
+                title: Tasks {{ now().strftime('%m/%d') }}
+          - type: button
             name: Update Dropdowns
             icon: mdi:sync
             tap_action:
@@ -638,6 +1015,7 @@ views:
                 entity_id:
                   - sensor.jotty_total_notes
                   - sensor.jotty_total_checklists
+                  - sensor.jotty_total_tasks
   - title: Stats
     path: stats
     icon: mdi:chart-box
@@ -655,6 +1033,11 @@ views:
           - type: statistic
             entity: sensor.jotty_total_checklists
             name: Lists
+            stat_type: mean
+            period: 999
+          - type: statistic
+            entity: sensor.jotty_total_tasks
+            name: Tasks
             stat_type: mean
             period: 999
           - type: statistic
@@ -689,6 +1072,9 @@ views:
           - entity: sensor.jotty_total_checklists
             name: Total Lists
             icon: mdi:format-list-checks
+          - entity: sensor.jotty_total_tasks
+            name: Total Tasks
+            icon: mdi:clipboard-list
           - entity: sensor.jotty_total_items
             name: Total Items
             icon: mdi:checkbox-multiple-marked

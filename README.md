@@ -4,14 +4,21 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 
 ![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview.gif)
 
+### 2.0 12/9/25 Merry Xmas
+- **Task lists have been added!**: Create, edit, and delete task lists from Home Assistant
+- Create, edit, delete custom tasks statuses
+- Create sub tasks for task items
+- All tasks and items are imported as their own individual sensor
+
 ### Basically it does this
 
+- **NEW!! 2.0 : Tasklist Support**: Create and manage both task lists
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
-- **Checklist Support**: Create and manage both simple checklists and task lists
+- **Checklist Support**: Create and manage simple checklists
 - **Real Time Synchronization**: Changes sync with your Jotty server automatically
 - **Granule Notifications**: Every note, list and item is imported as an entity, giving you control over every detail
 - **Demo Dashboard**: Pre built Lovelace dashboard with full functionality included
-- **Statistics Tracking**: Monitor note counts, list completion rates, and more
+- **Statistics Tracking**: Monitor note counts, list, task completion rates, and more
 
 ### Requirements
 
@@ -74,7 +81,7 @@ action:
 
 **Full interactive dashboard available in [Jotty: Notes and lists for Home Assistant Installation Guide](INSTALLATION.md)**:
 1. Go to the Lists tab
-2. Enter a title and select type (simple or task)
+2. Enter a title
 3. Click "Create"
 4. The list appears in your lists view
 
@@ -86,6 +93,23 @@ data:
   type: "simple"
 ```
 
+### Creating Task Lists (Kanban)
+
+Task lists provide Kanban style organization with customizable status columns.
+
+**Via Dashboard**:
+1. Go to the Tasks tab
+2. Enter a title
+3. Click "Create"
+4. Use the Columns button to customize Kanban columns
+
+**Via Service Call**:
+```yaml
+service: jotty.create_task
+data:
+  title: "Sprint Tasks"
+```
+
 ### Managing Items
 
 **Add Item to List**:
@@ -94,7 +118,25 @@ service: jotty.add_checklist_item
 data:
   checklist_id: "YOUR_CHECKLIST_ID"
   text: "Buy milk"
-  status: "todo"  # Only for task lists
+  status: "todo"
+```
+
+**Add Nested Sub Item** (supports unlimited nesting):
+```yaml
+service: jotty.add_checklist_item
+data:
+  checklist_id: "YOUR_CHECKLIST_ID"
+  text: "Sub task under first item"
+  parent_index: "0"
+```
+
+```yaml
+# Deeper nesting example
+service: jotty.add_checklist_item
+data:
+  checklist_id: "YOUR_CHECKLIST_ID"
+  text: "Sub sub task"
+  parent_index: "0.1"
 ```
 
 **Check Item**:
@@ -102,7 +144,15 @@ data:
 service: jotty.check_item
 data:
   checklist_id: "YOUR_CHECKLIST_ID"
-  item_index: 0  # First item
+  item_index: "0"
+```
+
+**Check Nested Item**:
+```yaml
+service: jotty.check_item
+data:
+  checklist_id: "YOUR_CHECKLIST_ID"
+  item_index: "0.0"
 ```
 
 **Uncheck Item**:
@@ -110,7 +160,93 @@ data:
 service: jotty.uncheck_item
 data:
   checklist_id: "YOUR_CHECKLIST_ID"
-  item_index: 0
+  item_index: "0"
+```
+
+**Delete Item** (including nested):
+```yaml
+service: jotty.delete_checklist_item
+data:
+  checklist_id: "YOUR_CHECKLIST_ID"
+  item_index: "0.1"
+```
+
+### Managing Task Items
+
+**Add Task Item**:
+```yaml
+service: jotty.add_task_item
+data:
+  task_id: "YOUR_TASK_ID"
+  text: "Implement feature"
+  status: "todo"
+```
+
+**Add Sub Task**:
+```yaml
+service: jotty.add_task_item
+data:
+  task_id: "YOUR_TASK_ID"
+  text: "Write unit tests"
+  status: "todo"
+  parent_index: "0"
+```
+
+**Update Task Item Status** (move between Kanban columns):
+```yaml
+service: jotty.update_task_item_status
+data:
+  task_id: "YOUR_TASK_ID"
+  item_index: "0"
+  status: "in_progress"
+```
+
+> **Known Issue**: The Jotty API has a bug where `update_task_item_status` returns success but doesn't persist the change. This affects both top level and nested items. Items can be created with an initial status, but cannot be moved between columns. The Jotty developer is aware of this and a fix is coming ASAP
+
+**Delete Task Item**:
+```yaml
+service: jotty.delete_task_item
+data:
+  task_id: "YOUR_TASK_ID"
+  item_index: "0.0"
+```
+
+### Managing Kanban Columns (Task Statuses)
+
+**Get All Statuses**:
+```yaml
+service: jotty.get_task_statuses
+data:
+  task_id: "YOUR_TASK_ID"
+```
+
+**Create Custom Status Column**:
+```yaml
+service: jotty.create_task_status
+data:
+  task_id: "YOUR_TASK_ID"
+  status_id: "review"
+  label: "In Review"
+  color: "#3b82f6"
+  order: 2
+```
+
+**Update Status Column**:
+```yaml
+service: jotty.update_task_status
+data:
+  task_id: "YOUR_TASK_ID"
+  status_id: "review"
+  label: "Code Review"
+  color: "#8b5cf6"
+```
+
+**Delete Status Column**:
+```yaml
+service: jotty.delete_task_status
+data:
+  task_id: "YOUR_TASK_ID"
+  status_id: "review"
 ```
 
 ### Editing and Deleting
@@ -138,9 +274,18 @@ data:
   checklist_id: "YOUR_CHECKLIST_ID"
 ```
 
+**Delete Task List**:
+```yaml
+service: jotty.delete_task
+data:
+  task_id: "YOUR_TASK_ID"
+```
+
 ## Available Services
 
-### jotty.create_note
+### Notes
+
+#### jotty.create_note
 Create a new note in Jotty.
 
 | Field | Type | Required | Description |
@@ -148,7 +293,7 @@ Create a new note in Jotty.
 | title | string | Yes | The title of the note |
 | content | string | No | The content of the note |
 
-### jotty.update_note
+#### jotty.update_note
 Update an existing note.
 
 | Field | Type | Required | Description |
@@ -157,14 +302,16 @@ Update an existing note.
 | title | string | No | New title for the note |
 | content | string | No | New content for the note |
 
-### jotty.delete_note
+#### jotty.delete_note
 Delete a note from Jotty.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | note_id | string | Yes | The UUID of the note |
 
-### jotty.create_checklist
+### Checklists
+
+#### jotty.create_checklist
 Create a new checklist.
 
 | Field | Type | Required | Description |
@@ -172,59 +319,233 @@ Create a new checklist.
 | title | string | Yes | The title of the checklist |
 | type | string | No | Type: "simple" or "task" (default: "simple") |
 
-### jotty.add_checklist_item
-Add an item to a checklist.
+#### jotty.update_checklist
+Update a checklist title.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| checklist_id | string | Yes | The UUID of the checklist |
+| title | string | No | New title for the checklist |
+
+#### jotty.add_checklist_item
+Add an item to a checklist (supports nested items).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | checklist_id | string | Yes | The UUID of the checklist |
 | text | string | Yes | The text of the item |
 | status | string | No | Status for task lists: "todo", "in_progress", "paused", "completed" |
+| parent_index | string | No | Index path of parent for nested items (e.g., "0", "0.1", "2.0.1") |
 
-### jotty.check_item
-Mark a checklist item as completed.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| checklist_id | string | Yes | The UUID of the checklist |
-| item_index | integer | Yes | The index of the item (0-based) |
-
-### jotty.uncheck_item
-Mark a checklist item as incomplete.
+#### jotty.check_item
+Mark a checklist item as completed (supports nested items).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | checklist_id | string | Yes | The UUID of the checklist |
-| item_index | integer | Yes | The index of the item (0-based) |
+| item_index | string | Yes | The index path of the item (e.g., "0" or "0.1" for nested) |
 
-### jotty.delete_checklist
+#### jotty.uncheck_item
+Mark a checklist item as incomplete (supports nested items).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| checklist_id | string | Yes | The UUID of the checklist |
+| item_index | string | Yes | The index path of the item |
+
+#### jotty.delete_checklist_item
+Delete an item from a checklist (supports nested items).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| checklist_id | string | Yes | The UUID of the checklist |
+| item_index | string | Yes | The index path of the item |
+
+#### jotty.delete_checklist
 Delete a checklist from Jotty.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | checklist_id | string | Yes | The UUID of the checklist |
 
-## Sensors are why we all do it
+### Task Lists (Kanban)
+
+#### jotty.create_task
+Create a new task list with Kanban columns.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| title | string | Yes | The title of the task list |
+
+#### jotty.update_task
+Update a task list title.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| title | string | No | New title for the task list |
+
+#### jotty.delete_task
+Delete a task list from Jotty.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+
+#### jotty.add_task_item
+Add an item to a task list (supports nested sub-tasks).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| text | string | Yes | The text of the task item |
+| status | string | No | Initial status (default: "todo") |
+| parent_index | string | No | Index path of parent for sub tasks (e.g., "0", "0.1") |
+
+#### jotty.update_task_item_status
+Change the status of a task item (move between Kanban columns).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| item_index | string | Yes | The index path of the item |
+| status | string | Yes | New status for the task |
+
+> **API Bug**: This endpoint returns success but doesn't persist changes. See [Known Issues](#known-issues).
+
+#### jotty.delete_task_item
+Delete an item from a task list (supports nested items).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| item_index | string | Yes | The index path of the item |
+
+### Kanban Status Management
+
+#### jotty.get_task_statuses
+Get all Kanban column statuses for a task list.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+
+#### jotty.create_task_status
+Add a new Kanban column to a task list.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| status_id | string | Yes | Unique identifier for the status (e.g., "review", "blocked") |
+| label | string | Yes | Display name for the status |
+| color | string | No | Hex color code (e.g., "#3b82f6") |
+| order | integer | No | Display order (0-based) |
+
+#### jotty.update_task_status
+Update a Kanban column.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| status_id | string | Yes | The ID of the status to update |
+| label | string | No | New display name |
+| color | string | No | New hex color code |
+| order | integer | No | New display order |
+
+#### jotty.delete_task_status
+Delete a Kanban column (items move to first available status).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| task_id | string | Yes | The UUID of the task list |
+| status_id | string | Yes | The ID of the status to delete |
+
+## Sensors
 
 The integration creates multiple sensors for monitoring your Jotty data:
 
 ### Statistics Sensors
 
-- **sensor.jotty_total_notes**: Total number of notes in the "Home Assistant" category
-- **sensor.jotty_total_checklists**: Total number of checklists in the "Home Assistant" category
-- **sensor.jotty_total_items**: Total number of items across all checklists
-- **sensor.jotty_completed_items**: Number of completed items
-- **sensor.jotty_pending_items**: Number of pending (incomplete) items
-- **sensor.jotty_completion_rate**: Overall completion rate percentage
+| Sensor | Description |
+|--------|-------------|
+| `sensor.jotty_total_notes` | Total number of notes in the "Home Assistant" category |
+| `sensor.jotty_total_checklists` | Total number of checklists |
+| `sensor.jotty_total_tasks` | Total number of task lists |
+| `sensor.jotty_total_items` | Total items across all checklists |
+| `sensor.jotty_completed_items` | Number of completed items |
+| `sensor.jotty_pending_items` | Number of pending (incomplete) items |
+| `sensor.jotty_completion_rate` | Overall completion rate percentage |
 
 ### Dynamic Sensors
 
-The integration also creates individual sensors for each note and checklist:
+The integration creates individual sensors for each note, checklist, and task:
 
-- **sensor.jotty_note_[title]**: One sensor per note containing title, content, and metadata
-- **sensor.jotty_list_[title]**: One sensor per checklist containing title, items, and statistics
+#### Note Sensors
+`sensor.jotty_note_[title]` - One sensor per note
 
-Each sensor includes attributes with detailed information such as IDs, creation dates, update times, and item lists.
+**Attributes**:
+- `note_id`: UUID of the note
+- `content`: Note content
+- `category`: Category (always "Home Assistant")
+- `created`: Creation timestamp
+- `updated`: Last update timestamp
+
+#### Checklist Sensors
+`sensor.jotty_list_[title]`  One sensor per checklist
+
+**Attributes**:
+- `checklist_id`: UUID of the checklist
+- `title`: Checklist title
+- `type`: "simple" or "task"
+- `items`: Array of items (with nested children)
+- `flat_items`: Flattened array with `index_path` for each item
+- `completed`: Count of completed items
+- `total`: Total item count
+- `completion_rate`: Percentage complete
+- `created`: Creation timestamp
+- `updated`: Last update timestamp
+
+#### Task Sensors
+`sensor.jotty_task_[title]` One sensor per task list
+
+**Attributes**:
+- `task_id`: UUID of the task list
+- `title`: Task list title
+- `items`: Array of items (with nested children)
+- `flat_items`: Flattened array with `index_path` for each item
+- `statuses`: Array of Kanban column definitions
+  - `id`: Status identifier
+  - `name`: Display name
+  - `color`: Hex color
+  - `order`: Sort order
+- `status_counts`: Object with count per status
+- `todo`: Count of items in "todo" status
+- `in_progress`: Count of items in "in_progress" status
+- `completed`: Count of items in "completed" status
+- `total`: Total item count
+- `completion_rate`: Percentage complete
+- `created`: Creation timestamp
+- `updated`: Last update timestamp
+
+### Nested Items Structure
+
+Items can contain nested children. The `flat_items` attribute provides a flattened view with `index_path` for easy iteration:
+
+```yaml
+flat_items:
+  - id: "task-123"
+    text: "Parent task"
+    status: "in_progress"
+    index_path: "0"
+  - id: "task-456"
+    text: "Sub-task"
+    status: "todo"
+    index_path: "0.0"
+  - id: "task-789"
+    text: "Another sub task"
+    status: "completed"
+    index_path: "0.1"
+```
 
 ## Automation Examples
 
@@ -279,7 +600,7 @@ automation:
           message: "Great job! You have completed {{ states('sensor.jotty_completed_items') }} tasks today!"
 ```
 
-### Auto-Create Daily Task List
+### Auto Create Daily Task List
 ```yaml
 automation:
   - alias: "Create Daily Tasks"
@@ -287,21 +608,32 @@ automation:
       - platform: time
         at: "06:00:00"
     action:
-      - service: jotty.create_checklist
+      - service: jotty.create_task
         data:
           title: "Tasks for {{ now().strftime('%A, %B %d') }}"
-          type: "task"
-      #- delay: "00:00:03"
-      - service: jotty.add_checklist_item
+```
+
+### Create Sprint Task List with Custom Columns
+```yaml
+automation:
+  - alias: "Create Sprint Board"
+    trigger:
+      - platform: time
+        at: "09:00:00"
+    condition:
+      - condition: time
+        weekday:
+          - mon
+    action:
+      - service: jotty.create_task
         data:
-          checklist_id: "{{ state_attr('sensor.jotty_total_checklists', 'last_created_id') }}"
-          text: "Review daily schedule"
-          status: "todo"
+          title: "Sprint {{ now().isocalendar()[1] }}"
+      # Add custom columns after creation via dashboard or additional service calls
 ```
 
 ## Dashboard Overview
 
-The included dashboard provides a complete interface for managing your notes and lists:
+The included dashboard provides a complete interface for managing your notes, lists, and tasks:
 
 ### Notes Tab
 - Create new notes with title and content
@@ -311,13 +643,26 @@ The included dashboard provides a complete interface for managing your notes and
 - See formatted content
 
 ### Lists Tab
-- Create new checklists (simple or task type)
-- Manage existing lists using dropdown picker
-- Add items to selected list
-- Toggle item completion status
-- *Update task statuses. Coming Soon [Roadmap](#roadmap)*
-- Delete lists with confirmation
-- View progress bars and statistics
+- Create new checklists (simple type)
+- Add items directly from the card
+- Toggle item completion with checkboxes
+- Delete individual items
+- Delete entire lists with confirmation
+- View progress (completed/total)
+
+### Tasks Tab
+- Create new task lists (Kanban style)
+- Add tasks with initial status selection
+- Add sub tasks with the ➕ button on each item
+- View nested items with visual indentation
+- Status dropdown to move between columns (pending API fix)
+- Customize Kanban columns via ⚙️ Columns button:
+  - View existing columns with colors
+  - Rename columns
+  - Delete columns
+  - Add new custom columns with ID, label, and color
+- Delete individual tasks
+- Delete entire task lists with confirmation
 
 ### Quick Actions Tab
 - One tap creation of common note types
@@ -333,10 +678,37 @@ The included dashboard provides a complete interface for managing your notes and
 - Visual statistics cards
 - Total notes count
 - Total lists count
+- Total tasks count
 - Completion rate percentage
 - Items completed counter
 - Pending items counter
 - Detailed statistics table
+
+## Known Issues
+
+### Task Item Status Not Persisting
+
+**Issue**: The `jotty.update_task_item_status` service returns success but the status change is not saved.
+
+**Affected Endpoints**:
+- `PUT /api/tasks/{id}/items/{index}/status` Top level items
+- `PUT /api/tasks/{id}/items/{index.subindex}/status` Nested items
+
+**Status**: Reported to Jotty developer. All other API endpoints work correctly.
+
+## Index Path Reference
+
+For nested items, use dot notation to specify the path:
+
+| Path | Description |
+|------|-------------|
+| `"0"` | First top level item |
+| `"1"` | Second top level item |
+| `"0.0"` | First child of first item |
+| `"0.1"` | Second child of first item |
+| `"2.0.1"` | Second child of first child of third item |
+
+This applies to all services that accept `item_index` or `parent_index` parameters.
 
 ### Getting Help & Troubleshooting
 

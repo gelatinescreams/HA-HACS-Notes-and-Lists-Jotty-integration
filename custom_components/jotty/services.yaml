@@ -80,9 +80,28 @@ create_checklist:
             - "simple"
             - "task"
 
+update_checklist:
+  name: Update Checklist
+  description: Update an existing checklist title
+  fields:
+    checklist_id:
+      name: Checklist ID
+      description: The UUID of the checklist to update
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    title:
+      name: Title
+      description: The new title of the checklist
+      required: false
+      example: "Updated List Title"
+      selector:
+        text:
+
 add_checklist_item:
   name: Add Checklist Item
-  description: Add an item to a checklist
+  description: Add an item to a checklist (supports nested items)
   fields:
     checklist_id:
       name: Checklist ID
@@ -109,10 +128,17 @@ add_checklist_item:
             - "in_progress"
             - "paused"
             - "completed"
+    parent_index:
+      name: Parent Index
+      description: Index path of parent item for nested items (e.g., "0" or "0.1")
+      required: false
+      example: "0"
+      selector:
+        text:
 
 check_item:
   name: Check Item
-  description: Mark a checklist item as completed
+  description: Mark a checklist item as completed (supports nested items with index paths like "0.1")
   fields:
     checklist_id:
       name: Checklist ID
@@ -123,17 +149,15 @@ check_item:
         text:
     item_index:
       name: Item Index
-      description: The index of the item (0-based)
+      description: The index of the item (0-based, or path like "0.1" for nested)
       required: true
-      example: 0
+      example: "0"
       selector:
-        number:
-          min: 0
-          mode: box
+        text:
 
 uncheck_item:
   name: Uncheck Item
-  description: Mark a checklist item as incomplete
+  description: Mark a checklist item as incomplete (supports nested items with index paths like "0.1")
   fields:
     checklist_id:
       name: Checklist ID
@@ -144,13 +168,11 @@ uncheck_item:
         text:
     item_index:
       name: Item Index
-      description: The index of the item (0-based)
+      description: The index of the item (0-based, or path like "0.1" for nested)
       required: true
-      example: 0
+      example: "0"
       selector:
-        number:
-          min: 0
-          mode: box
+        text:
 
 delete_checklist:
   name: Delete Checklist
@@ -161,5 +183,265 @@ delete_checklist:
       description: The UUID of the checklist to delete
       required: true
       example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+
+delete_checklist_item:
+  name: Delete Checklist Item
+  description: Delete an item from a checklist (supports nested items with index paths like "0.1")
+  fields:
+    checklist_id:
+      name: Checklist ID
+      description: The UUID of the checklist
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    item_index:
+      name: Item Index
+      description: The index of the item (0-based, or path like "0.1" for nested)
+      required: true
+      example: "0"
+      selector:
+        text:
+
+create_task:
+  name: Create Task List
+  description: Create a new task list in Jotty (Kanban-style, automatically set to Home Assistant category)
+  fields:
+    title:
+      name: Title
+      description: The title of the task list
+      required: true
+      example: "Project Tasks"
+      selector:
+        text:
+
+update_task:
+  name: Update Task List
+  description: Update an existing task list title
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list to update
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    title:
+      name: Title
+      description: The new title of the task list
+      required: false
+      example: "Updated Task List Title"
+      selector:
+        text:
+
+delete_task:
+  name: Delete Task List
+  description: Delete a task list from Jotty
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list to delete
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+
+add_task_item:
+  name: Add Task Item
+  description: Add an item to a task list (supports nested items)
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    text:
+      name: Item Text
+      description: The text of the task item
+      required: true
+      example: "Complete the report"
+      selector:
+        text:
+    status:
+      name: Status
+      description: Initial status of the task
+      required: false
+      default: "todo"
+      example: "todo"
+      selector:
+        select:
+          options:
+            - "todo"
+            - "in_progress"
+            - "completed"
+    parent_index:
+      name: Parent Index
+      description: Index path of parent item for nested items (e.g., "0" or "0.1")
+      required: false
+      example: "0"
+      selector:
+        text:
+
+update_task_item_status:
+  name: Update Task Item Status
+  description: Change the status of a task item (move between Kanban columns)
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    item_index:
+      name: Item Index
+      description: The index of the item (0-based, or path like "0.1" for nested)
+      required: true
+      example: "0"
+      selector:
+        text:
+    status:
+      name: Status
+      description: The new status for the task
+      required: true
+      example: "in_progress"
+      selector:
+        text:
+
+delete_task_item:
+  name: Delete Task Item
+  description: Delete an item from a task list (supports nested items with index paths like "0.1")
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    item_index:
+      name: Item Index
+      description: The index of the item (0-based, or path like "0.1" for nested)
+      required: true
+      example: "0"
+      selector:
+        text:
+
+get_task_statuses:
+  name: Get Task Statuses
+  description: Get all Kanban column statuses for a task list
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+
+create_task_status:
+  name: Create Task Status
+  description: Add a new Kanban column status to a task list
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    status_id:
+      name: Status ID
+      description: Unique identifier for the status (e.g., "review", "blocked")
+      required: true
+      example: "review"
+      selector:
+        text:
+    label:
+      name: Label
+      description: Display name for the status
+      required: true
+      example: "In Review"
+      selector:
+        text:
+    color:
+      name: Color
+      description: Color code for the status column (hex)
+      required: false
+      example: "#3b82f6"
+      selector:
+        text:
+    order:
+      name: Order
+      description: Display order (0-based)
+      required: false
+      example: 2
+      selector:
+        number:
+          min: 0
+          mode: box
+
+update_task_status:
+  name: Update Task Status
+  description: Update a Kanban column status
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    status_id:
+      name: Status ID
+      description: The ID of the status to update
+      required: true
+      example: "review"
+      selector:
+        text:
+    label:
+      name: Label
+      description: New display name for the status
+      required: false
+      example: "Code Review"
+      selector:
+        text:
+    color:
+      name: Color
+      description: New color code for the status column (hex)
+      required: false
+      example: "#8b5cf6"
+      selector:
+        text:
+    order:
+      name: Order
+      description: New display order (0-based)
+      required: false
+      example: 3
+      selector:
+        number:
+          min: 0
+          mode: box
+
+delete_task_status:
+  name: Delete Task Status
+  description: Delete a Kanban column status (items will move to first available status)
+  fields:
+    task_id:
+      name: Task ID
+      description: The UUID of the task list
+      required: true
+      example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+      selector:
+        text:
+    status_id:
+      name: Status ID
+      description: The ID of the status to delete
+      required: true
+      example: "review"
       selector:
         text:

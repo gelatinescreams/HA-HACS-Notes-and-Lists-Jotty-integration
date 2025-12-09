@@ -1,9 +1,3 @@
-# =============================================================================
-# JOTTY HOME ASSISTANT INTEGRATION VIA HACS
-# These helpers MUST be created for Jotty to work properly
-# Go to Settings > Devices & Services > Helpers > Create Helper
-# Create each helper exactly as specified below
-# =============================================================================
 input_text:
   jotty_note_id:
     name: "Note ID"
@@ -47,6 +41,11 @@ input_text:
     initial: ""
     max: 255
 
+  jotty_task_title:
+    name: "Task Title"
+    initial: ""
+    max: 255
+    
   jotty_selected_checklist_id:
     name: "Selected Checklist ID"
     initial: ""
@@ -71,8 +70,80 @@ input_text:
     name: "Loading Item"
     initial: ""
     max: 100
+  jotty_quick_task_action_data:
+    name: Quick Task Action Data
+    max: 255
+    icon: mdi:clipboard-list
 
+  jotty_quick_delete_item_data:
+    name: Quick Delete Item Data
+    max: 255
+    icon: mdi:delete
+
+  jotty_selected_task_id:
+    name: "Selected Task ID"
+    initial: ""
+    max: 255
+
+  jotty_selected_task_title:
+    name: "Selected Task Title"
+    initial: ""
+    max: 255
+
+  jotty_task_item_text:
+    name: "Task Item Text"
+    initial: ""
+    max: 255
+  jotty_new_status_id:
+    name: "New Status ID"
+    initial: ""
+    max: 50
+    icon: mdi:identifier
+
+  jotty_new_status_label:
+    name: "New Status Label"
+    initial: ""
+    max: 100
+    icon: mdi:label
+
+  jotty_new_status_color:
+    name: "New Status Color"
+    initial: "#3b82f6"
+    max: 20
+    icon: mdi:palette
+
+  jotty_edit_status_id:
+    name: "Edit Status ID"
+    initial: ""
+    max: 50
+
+  jotty_edit_status_label:
+    name: "Edit Status Label"
+    initial: ""
+    max: 100
+
+  jotty_edit_status_color:
+    name: "Edit Status Color"
+    initial: ""
+    max: 20
+
+  jotty_kanban_action_data:
+    name: Kanban Action Data
+    max: 255
+    icon: mdi:view-column
+
+  jotty_parent_item_index:
+    name: "Parent Item Index"
+    initial: ""
+    max: 50
+    icon: mdi:file-tree    
 input_select:
+  jotty_status_picker:
+    name: "Status Column Picker"
+    options:
+      - "-- Select status --"
+    initial: "-- Select status --"
+    icon: mdi:view-column
   jotty_checklist_type:
     name: "Checklist Type"
     options:
@@ -107,6 +178,26 @@ input_select:
       - "-- Select item --"
     initial: "-- Select item --"
 
+  jotty_task_picker:
+    name: "Task Picker"
+    options:
+      - "-- Pick a task list --"
+    initial: "-- Pick a task list --"
+
+  jotty_task_item_picker:
+    name: "Task Item Picker"
+    options:
+      - "-- Select task item --"
+    initial: "-- Select task item --"
+
+  jotty_new_task_item_status:
+    name: "New Task Item Status"
+    options:
+      - "todo"
+      - "in_progress"
+      - "completed"
+    initial: "todo"
+    
   jotty_item_status:
     name: "Item Status"
     options:
@@ -116,7 +207,7 @@ input_select:
       - "paused"
       - "completed"
     initial: "-- Select status --"
-
+    
 input_number:
   jotty_selected_item_index:
     name: "Selected Item Index"
@@ -125,7 +216,15 @@ input_number:
     step: 1
     initial: 0
     mode: box
-
+  jotty_new_status_order:
+    name: "New Status Order"
+    initial: 0
+    min: 0
+    max: 20
+    step: 1
+    mode: box
+    icon: mdi:sort-numeric-ascending    
+    
 input_boolean:
   jotty_item_completed:
     name: "Item Completed"
@@ -135,23 +234,3 @@ input_boolean:
     name: "Is Loading"
     initial: false
     icon: mdi:loading
-
-template:
-  - sensor:
-      - name: "New Note Character Count"
-        unique_id: jotty_new_note_char_count
-        state: "{{ states('input_text.jotty_note_content') | length }}"
-        unit_of_measurement: "chars"
-        icon: mdi:counter
-        attributes:
-          max: 255
-          remaining: "{{ 255 - (states('input_text.jotty_note_content') | length) }}"
-          
-      - name: "Edit Note Character Count"
-        unique_id: jotty_edit_note_char_count
-        state: "{{ states('input_text.jotty_edit_note_content') | length }}"
-        unit_of_measurement: "chars"
-        icon: mdi:counter
-        attributes:
-          max: 255
-          remaining: "{{ 255 - (states('input_text.jotty_edit_note_content') | length) }}"

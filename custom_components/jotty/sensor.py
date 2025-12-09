@@ -15,6 +15,36 @@ def slugify(text):
     text = re.sub(r'[^a-z0-9]+', '_', text)
     return text.strip('_')
 
+def flatten_items(items, prefix=""):
+    """Flatten nested items into a list with index paths."""
+    result = []
+    for i, item in enumerate(items):
+        index_path = f"{prefix}{i}" if prefix == "" else f"{prefix}.{i}"
+        flat_item = {**item, "index_path": index_path}
+        result.append(flat_item)
+        if item.get("children"):
+            result.extend(flatten_items(item["children"], index_path))
+    return result
+
+def count_items_recursive(items):
+    """Count all items including nested children."""
+    count = 0
+    for item in items:
+        count += 1
+        if item.get("children"):
+            count += count_items_recursive(item["children"])
+    return count
+
+def count_completed_recursive(items):
+    """Count completed items including nested children."""
+    count = 0
+    for item in items:
+        if item.get("completed", False) or item.get("status") == "completed":
+            count += 1
+        if item.get("children"):
+            count += count_completed_recursive(item["children"])
+    return count
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -29,6 +59,7 @@ async def async_setup_entry(
         JottySensor(coordinator, "completed_items", "Completed Items", "mdi:check-all"),
         JottySensor(coordinator, "pending_items", "Pending Items", "mdi:clock-outline"),
         JottySensor(coordinator, "completion_rate", "Completion Rate", "mdi:percent"),
+        JottySensor(coordinator, "total_tasks", "Total Tasks", "mdi:clipboard-list"),
     ]
     
     async_add_entities(sensors)
@@ -47,11 +78,13 @@ async def async_setup_entry(
 async def _update_ha_entities(hass, entry, coordinator, async_add_entities):
     ha_notes = coordinator.data.get("ha_notes", [])
     ha_lists = coordinator.data.get("ha_checklists", [])
+    ha_tasks = coordinator.data.get("ha_tasks", [])
     
-    _LOGGER.debug(f"Found {len(ha_notes)} HA notes and {len(ha_lists)} HA checklists")
+    _LOGGER.debug(f"Found {len(ha_notes)} HA notes, {len(ha_lists)} HA checklists, {len(ha_tasks)} HA tasks")
     
     current_ids = {f"note_{n['id']}" for n in ha_notes}
     current_ids.update({f"list_{l['id']}" for l in ha_lists})
+    current_ids.update({f"task_{t['id']}" for t in ha_tasks})
     
     tracked_ids = hass.data[DOMAIN][entry.entry_id]["ha_entity_ids"]
     
@@ -70,6 +103,12 @@ async def _update_ha_entities(hass, entry, coordinator, async_add_entities):
             if list_id in new_ids:
                 new_entities.append(JottyChecklistSensor(coordinator, checklist['id'], checklist['title']))
                 _LOGGER.debug(f"Adding checklist sensor: {checklist['title']}")
+        
+        for task in ha_tasks:
+            task_id = f"task_{task['id']}"
+            if task_id in new_ids:
+                new_entities.append(JottyTaskSensor(coordinator, task['id'], task['title']))
+                _LOGGER.debug(f"Adding task sensor: {task['title']}")
         
         if new_entities:
             async_add_entities(new_entities)
@@ -96,31 +135,31 @@ class JottySensor(CoordinatorEntity, SensorEntity):
         elif self._sensor_type == "total_items":
             total = 0
             for checklist in ha_lists:
-                total += len(checklist.get("items", []))
+                total += count_items_recursive(checklist.get("items", []))
             return total
         elif self._sensor_type == "completed_items":
             completed = 0
             for checklist in ha_lists:
-                for item in checklist.get("items", []):
-                    if item.get("completed", False):
-                        completed += 1
+                completed += count_completed_recursive(checklist.get("items", []))
             return completed
         elif self._sensor_type == "pending_items":
             total = 0
             completed = 0
             for checklist in ha_lists:
                 items = checklist.get("items", [])
-                total += len(items)
-                completed += sum(1 for item in items if item.get("completed", False))
+                total += count_items_recursive(items)
+                completed += count_completed_recursive(items)
             return total - completed
         elif self._sensor_type == "completion_rate":
             total = 0
             completed = 0
             for checklist in ha_lists:
                 items = checklist.get("items", [])
-                total += len(items)
-                completed += sum(1 for item in items if item.get("completed", False))
+                total += count_items_recursive(items)
+                completed += count_completed_recursive(items)
             return round((completed / total * 100) if total > 0 else 0, 1)
+        elif self._sensor_type == "total_tasks":
+            return len(self.coordinator.data.get("ha_tasks", []))
         
         return 0
 
@@ -130,6 +169,8 @@ class JottySensor(CoordinatorEntity, SensorEntity):
             return {"count": len(self.coordinator.data.get("ha_notes", []))}
         elif self._sensor_type == "total_checklists":
             return {"count": len(self.coordinator.data.get("ha_checklists", []))}
+        elif self._sensor_type == "total_tasks":
+            return {"count": len(self.coordinator.data.get("ha_tasks", []))}
         
         return {}
 
@@ -192,8 +233,9 @@ class JottyChecklistSensor(CoordinatorEntity, SensorEntity):
     def native_value(self):
         checklist = self._get_checklist()
         if checklist:
-            completed = sum(1 for item in checklist.get("items", []) if item.get("completed", False))
-            total = len(checklist.get("items", []))
+            items = checklist.get("items", [])
+            completed = count_completed_recursive(items)
+            total = count_items_recursive(items)
             return f"{completed}/{total}"
         return "0/0"
 
@@ -202,8 +244,9 @@ class JottyChecklistSensor(CoordinatorEntity, SensorEntity):
         checklist = self._get_checklist()
         if checklist:
             items = checklist.get("items", [])
-            completed = sum(1 for item in items if item.get("completed", False))
-            total = len(items)
+            completed = count_completed_recursive(items)
+            total = count_items_recursive(items)
+            flat_items = flatten_items(items)
             
             return {
                 "checklist_id": self.checklist_id,
@@ -211,6 +254,7 @@ class JottyChecklistSensor(CoordinatorEntity, SensorEntity):
                 "category": checklist.get("category", ""),
                 "type": checklist.get("type", "simple"),
                 "items": items,
+                "flat_items": flat_items,
                 "completed": completed,
                 "total": total,
                 "completion_rate": round((completed / total * 100) if total > 0 else 0, 1),
@@ -222,6 +266,7 @@ class JottyChecklistSensor(CoordinatorEntity, SensorEntity):
             "title": self._title,
             "category": "Home Assistant",
             "items": [],
+            "flat_items": [],
         }
 
     @property
@@ -233,4 +278,112 @@ class JottyChecklistSensor(CoordinatorEntity, SensorEntity):
         for checklist in ha_lists:
             if checklist["id"] == self.checklist_id:
                 return checklist
+        return None
+
+
+class JottyTaskSensor(CoordinatorEntity, SensorEntity):
+
+    def __init__(self, coordinator, task_id, title):
+        super().__init__(coordinator)
+        self.task_id = task_id
+        self._title = title
+        self._attr_name = f"Jotty Task: {title}"
+        self._attr_unique_id = f"jotty_task_{task_id}"
+        self._attr_icon = "mdi:clipboard-list"
+
+    @property
+    def native_value(self):
+        task = self._get_task()
+        if task:
+            items = task.get("items", [])
+            completed = self._count_by_status_recursive(items, "completed")
+            total = count_items_recursive(items)
+            return f"{completed}/{total}"
+        return "0/0"
+
+    def _count_by_status_recursive(self, items, status):
+        count = 0
+        for item in items:
+            if item.get("status") == status:
+                count += 1
+            if item.get("children"):
+                count += self._count_by_status_recursive(item["children"], status)
+        return count
+
+    @property
+    def extra_state_attributes(self):
+        task = self._get_task()
+        if task:
+            items = task.get("items", [])
+            raw_statuses = task.get("statuses", [])
+            
+            statuses = []
+            if raw_statuses:
+                for i, status in enumerate(raw_statuses):
+                    if isinstance(status, str):
+                        statuses.append({"id": status, "name": status.replace("_", " ").title(), "order": i})
+                    elif isinstance(status, dict):
+                        statuses.append({
+                            "id": status.get("id"),
+                            "name": status.get("label", status.get("name", status.get("id", "Unknown"))),
+                            "color": status.get("color"),
+                            "order": status.get("order", i)
+                        })
+            
+            if not statuses:
+                statuses = [
+                    {"id": "todo", "name": "To Do", "order": 0, "color": "#6b7280"},
+                    {"id": "in_progress", "name": "In Progress", "order": 1, "color": "#3b82f6"},
+                    {"id": "completed", "name": "Completed", "order": 2, "color": "#10b981"}
+                ]
+            
+            todo = self._count_by_status_recursive(items, "todo")
+            in_progress = self._count_by_status_recursive(items, "in_progress")
+            completed = self._count_by_status_recursive(items, "completed")
+            total = count_items_recursive(items)
+            flat_items = flatten_items(items)
+            
+            status_counts = {}
+            for status in statuses:
+                status_id = status.get("id") if isinstance(status, dict) else status
+                status_counts[status_id] = self._count_by_status_recursive(items, status_id)
+            
+            return {
+                "task_id": self.task_id,
+                "title": task.get("title", self._title),
+                "category": task.get("category", ""),
+                "items": items,
+                "flat_items": flat_items,
+                "statuses": statuses,
+                "status_counts": status_counts,
+                "todo": todo,
+                "in_progress": in_progress,
+                "completed": completed,
+                "total": total,
+                "completion_rate": round((completed / total * 100) if total > 0 else 0, 1),
+                "updated": task.get("updatedAt", ""),
+                "created": task.get("createdAt", ""),
+            }
+        return {
+            "task_id": self.task_id,
+            "title": self._title,
+            "category": "Home Assistant",
+            "items": [],
+            "flat_items": [],
+            "statuses": [
+                {"id": "todo", "name": "To Do", "order": 0, "color": "#6b7280"},
+                {"id": "in_progress", "name": "In Progress", "order": 1, "color": "#3b82f6"},
+                {"id": "completed", "name": "Completed", "order": 2, "color": "#10b981"}
+            ],
+        }
+
+    @property
+    def available(self):
+        return self._get_task() is not None
+
+    def _get_task(self):
+        ha_tasks = self.coordinator.data.get("ha_tasks", [])
+        for task in ha_tasks:
+            if task["id"] == self.task_id:
+                return task
         return None
