@@ -73,7 +73,7 @@ views:
                   left:50%;
                   transform:translateX(-50%);
                   z-index:9999;
-                  background:#2196F3;
+                  background:#32373b;
                   color:white;
                   padding:12px 24px;
                   border-radius:8px;
@@ -113,6 +113,19 @@ views:
                   font-style: italic;
                   text-align: right;
                 }
+                .note-send-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(33,150,243,0.1), rgba(3,169,244,0.1));
+                  border: 1px solid rgba(33,150,243,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .note-send-section.show { display: block; }
+                .note-send-section h4 { margin: 0 0 12px 0; color: #32373b; }
+                .send-targets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+                .send-targets label { display: flex; align-items: center; gap: 4px; font-size: 0.9em; cursor: pointer; }
+                .send-btn { padding: 8px 16px; background: #32373b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
               </style>
               <div id="jotty-loading">⏳ Processing...</div>
               <script>
@@ -130,6 +143,7 @@ views:
               </script>
               <div class="notes-container">
                 {% set ns = namespace(count=0, notes=[]) %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Note:') and state.state != 'unavailable' %}
                     {% set ns.notes = ns.notes + [state] %}
@@ -142,11 +156,23 @@ views:
                     <div class="note-card">
                       <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
                         <div class="note-title" style="flex-grow:1; margin-bottom:0; padding-bottom:8px; border-bottom:none;">{{ state.state }}</div>
-                        <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete {{ state.state }}?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&&el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
+                        <div style="display:flex;gap:4px;">
+                          <button style="padding:4px 12px; background:#32373b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-send-section');if(panel){panel.classList.toggle('show');}})(this);" title="Send to device">📤</button>
+                          <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete {{ state.state }}?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&&el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
+                        </div>
                       </div>
                       <div class="note-content">{{ state_attr(state.entity_id, 'content') }}</div>
                       <div class="note-timestamp">
                         Updated {{ relative_time(strptime(state_attr(state.entity_id, 'updated'), '%Y-%m-%dT%H:%M:%S.%fZ')) }} ago
+                      </div>
+                      <div class="note-send-section">
+                        <h4>Send Note To :</h4>
+                        <div class="send-targets">
+                          {% for n in notifiers %}{% if n != 'Nobody' %}
+                          <label><input type="checkbox" class="send-target-cb" value="{{ n }}"><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
+                          {% endif %}{% endfor %}
+                        </div>
+                        <button class="send-btn" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(cb=>cb.value);if(!targets.length){alert('Select at least one device');return;}btn.disabled=true;btn.textContent='Sending...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_send_note_to_devices',{targets:targets.join(','),title:'{{ state.state }}',message:'{{ state_attr(state.entity_id, "content") | replace("\n", " ") | truncate(200) }}'});}setTimeout(function(){btn.disabled=false;btn.textContent='Send Note';sec.classList.remove('show');},2000);})(this);">Send Note</button>
                       </div>
                     </div>
                   {% endif %}
@@ -190,9 +216,23 @@ views:
                   font-style: italic;
                   text-align: right;
                 }
+                .note-send-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(33,150,243,0.1), rgba(3,169,244,0.1));
+                  border: 1px solid rgba(33,150,243,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .note-send-section.show { display: block; }
+                .note-send-section h4 { margin: 0 0 12px 0; color: #32373b; }
+                .send-targets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+                .send-targets label { display: flex; align-items: center; gap: 4px; font-size: 0.9em; cursor: pointer; }
+                .send-btn { padding: 8px 16px; background: #32373b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
               </style>
               <div class="notes-container">
                 {% set ns = namespace(count=0, notes=[]) %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Note:') and state.state != 'unavailable' %}
                     {% set ns.notes = ns.notes + [state] %}
@@ -205,11 +245,23 @@ views:
                     <div class="note-card">
                       <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
                         <div class="note-title" style="flex-grow:1; margin-bottom:0; padding-bottom:8px; border-bottom:none;">{{ state.state }}</div>
-                        <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete {{ state.state }}?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&&el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
+                        <div style="display:flex;gap:4px;">
+                          <button style="padding:4px 12px; background:#32373b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-send-section');if(panel){panel.classList.toggle('show');}})(this);" title="Send to device">📤</button>
+                          <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete {{ state.state }}?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&&el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
+                        </div>
                       </div>
                       <div class="note-content">{{ state_attr(state.entity_id, 'content') }}</div>
                       <div class="note-timestamp">
                         Updated {{ relative_time(strptime(state_attr(state.entity_id, 'updated'), '%Y-%m-%dT%H:%M:%S.%fZ')) }} ago
+                      </div>
+                      <div class="note-send-section">
+                        <h4>Send Note To :</h4>
+                        <div class="send-targets">
+                          {% for n in notifiers %}{% if n != 'Nobody' %}
+                          <label><input type="checkbox" class="send-target-cb" value="{{ n }}"><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
+                          {% endif %}{% endfor %}
+                        </div>
+                        <button class="send-btn" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(cb=>cb.value);if(!targets.length){alert('Select at least one device');return;}btn.disabled=true;btn.textContent='Sending...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_send_note_to_devices',{targets:targets.join(','),title:'{{ state.state }}',message:'{{ state_attr(state.entity_id, "content") | replace("\n", " ") | truncate(200) }}'});}setTimeout(function(){btn.disabled=false;btn.textContent='Send Note';sec.classList.remove('show');},2000);})(this);">Send Note</button>
                       </div>
                     </div>
                   {% endif %}
@@ -272,12 +324,12 @@ views:
                   align-items: center;
                   margin-bottom: 12px;
                   padding-bottom: 12px;
-                  border-bottom: 2px solid var(--primary-color);
+                  border-bottom: 2px solid #2d3031;
                 }
                 .list-title { font-size: 1.4em; font-weight: 600; color: var(--primary-text-color); }
                 .list-progress {
                   font-size: 0.9em;
-                  background: var(--primary-color);
+                  background:#2d3031;
                   color: white;
                   padding: 4px 12px;
                   border-radius: 12px;
@@ -316,7 +368,7 @@ views:
                 }
                 .add-item-btn {
                   padding: 8px 16px;
-                  background: var(--primary-color);
+                  background: #2d3031;
                   color: white;
                   border: none;
                   border-radius: 4px;
@@ -334,8 +386,42 @@ views:
                   cursor: pointer;
                   font-size: 0.85em;
                 }
+                .reminder-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .reminder-btn:hover { background: rgba(156,39,176,0.1); }
+                .reminder-btn.active { color: #2d3031; }
+                .reminder-btn.inactive { opacity: 0.4; }
+                .header-actions {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                }
+                .reminder-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(103,58,183,0.1));
+                  border: 1px solid rgba(156,39,176,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .reminder-section.show { display: block; }
+                .reminder-section h4 { margin: 0 0 12px 0; color: #fff; }
+                .reminder-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+                .reminder-row label { font-size: 0.85em; color: var(--secondary-text-color); min-width: 50px; }
+                .reminder-row select, .reminder-row input[type="time"] { padding: 6px 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.9em; }
+                .reminder-row select { min-width: 120px; }
+                .reminder-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(156,39,176,0.2); }
+                .reminder-save-btn { padding: 8px 16px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+                .reminder-remove-btn { padding: 8px 16px; background: var(--error-color, #ff5555); color: white; border: none; border-radius: 4px; cursor: pointer; }
               </style>
-              <div id="jotty-loading-lists">⏳ Processing...</div>
+              <div id="jotty-loading-lists">Processing...</div>
               <script>
                 (function checkLoading(){
                   var banner=document.getElementById('jotty-loading-lists');
@@ -351,6 +437,8 @@ views:
               </script>
               <div class="lists-container">
                 {% set ns = namespace(count=0, lists=[]) %}
+                {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty List:') and state.state != 'unavailable' %}
                     {% set list_type = state_attr(state.entity_id, 'type') %}
@@ -367,10 +455,15 @@ views:
                     {% set items = state_attr(state.entity_id, 'items') or [] %}
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
+                    {% set has_reminder = reminder_configs is mapping and list_id in reminder_configs %}
+                    {% set config = reminder_configs.get(list_id, {}) if reminder_configs is mapping else {} %}
                     <div class="list-card">
                       <div class="list-header">
                         <div class="list-title">{{ list_title }}</div>
-                        <div class="list-progress">{{ completed }}/{{ total }}</div>
+                        <div class="header-actions">
+                          <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.list-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <div class="list-progress">{{ completed }}/{{ total }}</div>
+                        </div>
                       </div>
                       <div class="list-items">
                         {% for item in items %}
@@ -383,8 +476,52 @@ views:
                       </div>
                       <div class="add-item-section">
                         <input type="text" class="add-item-input" placeholder="Add new item...">
-                        <button class="add-item-btn" onclick="(function(btn){const inp=btn.previousElementSibling;if(!inp.value.trim()){inp.placeholder='Type something first!';setTimeout(function(){inp.placeholder='Add new item...';},2000);return;}const txt=inp.value.trim();inp.value='';inp.placeholder='Adding...';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||add|||'+txt});}setTimeout(function(){inp.placeholder='Add new item...';btn.disabled=false;},2000);})(this);">➕ Add</button>
+                        <button class="add-item-btn" onclick="(function(btn){const inp=btn.previousElementSibling;if(!inp.value.trim()){inp.placeholder='Type something first!';setTimeout(function(){inp.placeholder='Add new item...';},2000);return;}const txt=inp.value.trim();inp.value='';inp.placeholder='Adding...';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||add|||'+txt});}setTimeout(function(){inp.placeholder='Add new item...';btn.disabled=false;},2000);})(this);">Add Item</button>
                         <button class="delete-list-btn" onclick="if(confirm('Delete {{ list_title }}?')){(function(btn){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||delete'});}})(this);}">🗑️</button>
+                      </div>
+                      <div class="reminder-section">
+                        <h4>Reminder Notifications</h4>
+                        <div class="reminder-row" style="flex-direction:column;align-items:flex-start;">
+                          <label>Notify:</label>
+                          <div class="r-targets" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                            {% set saved_targets = (config.get('targets','') or config.get('target','')) %}
+                            {% for n in notifiers %}{% if n != 'Nobody' %}
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;"><input type="checkbox" class="r-target-cb" value="{{ n }}" {{ 'checked' if n in saved_targets else '' }}><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
+                            {% endif %}{% endfor %}
+                          </div>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Every:</label>
+                          <select class="r-interval">
+                            {% for iv in ['30 minutes','1 hour','2 hours','4 hours','8 hours','12 hours','Once a day'] %}<option value="{{ iv }}" {{ 'selected' if config.get('interval','1 hour')==iv else '' }}>{{ iv }}</option>{% endfor %}
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="r-days">
+                            <option value="weekdays" {{ 'selected' if config.get('days','weekdays')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if config.get('days','weekdays')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if config.get('days','weekdays')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Title:</label>
+                          <input type="text" class="r-title" placeholder="List/Task name" value="{{ config.get('custom_title','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>Message:</label>
+                          <input type="text" class="r-message" placeholder="X item(s) remaining" value="{{ config.get('custom_message','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>From:</label>
+                          <input type="time" class="r-start" value="{{ config.get('start','09:00') }}">
+                          <label>To:</label>
+                          <input type="time" class="r-end" value="{{ config.get('end','21:00') }}">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ list_id }}',item_type:'checklist',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save Notification';sec.classList.remove('show');},1500);})(this);">Save Notification</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ list_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
+                        </div>
                       </div>
                     </div>
                   {% endif %}
@@ -455,7 +592,7 @@ views:
                 }
                 .add-item-btn {
                   padding: 8px 16px;
-                  background: var(--primary-color);
+                  background: #2d3031;
                   color: white;
                   border: none;
                   border-radius: 4px;
@@ -473,9 +610,45 @@ views:
                   cursor: pointer;
                   font-size: 0.85em;
                 }
+                .reminder-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .reminder-btn:hover { background: rgba(156,39,176,0.1); }
+                .reminder-btn.active { color: #2d3031; }
+                .reminder-btn.inactive { opacity: 0.4; }
+                .header-actions {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                }
+                .reminder-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(103,58,183,0.1));
+                  border: 1px solid rgba(156,39,176,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .reminder-section.show { display: block; }
+                .reminder-section h4 { margin: 0 0 12px 0; color: #fff; }
+                .reminder-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+                .reminder-row label { font-size: 0.85em; color: var(--secondary-text-color); min-width: 50px; }
+                .reminder-row select, .reminder-row input[type="time"] { padding: 6px 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.9em; }
+                .reminder-row select { min-width: 120px; }
+                .reminder-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(156,39,176,0.2); }
+                .reminder-save-btn { padding: 8px 16px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+                .reminder-remove-btn { padding: 8px 16px; background: var(--error-color, #ff5555); color: white; border: none; border-radius: 4px; cursor: pointer; }
               </style>
               <div class="lists-container">
                 {% set ns = namespace(count=0, lists=[]) %}
+                {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty List:') and state.state != 'unavailable' %}
                     {% set list_type = state_attr(state.entity_id, 'type') %}
@@ -492,10 +665,15 @@ views:
                     {% set items = state_attr(state.entity_id, 'items') or [] %}
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
+                    {% set has_reminder = reminder_configs is mapping and list_id in reminder_configs %}
+                    {% set config = reminder_configs.get(list_id, {}) if reminder_configs is mapping else {} %}
                     <div class="list-card">
                       <div class="list-header">
                         <div class="list-title">{{ list_title }}</div>
-                        <div class="list-progress">{{ completed }}/{{ total }}</div>
+                        <div class="header-actions">
+                          <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.list-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <div class="list-progress">{{ completed }}/{{ total }}</div>
+                        </div>
                       </div>
                       <div class="list-items">
                         {% for item in items %}
@@ -508,8 +686,52 @@ views:
                       </div>
                       <div class="add-item-section">
                         <input type="text" class="add-item-input" placeholder="Add new item...">
-                        <button class="add-item-btn" onclick="(function(btn){const inp=btn.previousElementSibling;if(!inp.value.trim()){inp.placeholder='Type something first!';setTimeout(function(){inp.placeholder='Add new item...';},2000);return;}const txt=inp.value.trim();inp.value='';inp.placeholder='Adding...';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||add|||'+txt});}setTimeout(function(){inp.placeholder='Add new item...';btn.disabled=false;},2000);})(this);">➕ Add</button>
+                        <button class="add-item-btn" onclick="(function(btn){const inp=btn.previousElementSibling;if(!inp.value.trim()){inp.placeholder='Type something first!';setTimeout(function(){inp.placeholder='Add new item...';},2000);return;}const txt=inp.value.trim();inp.value='';inp.placeholder='Adding...';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||add|||'+txt});}setTimeout(function(){inp.placeholder='Add new item...';btn.disabled=false;},2000);})(this);">Add Item</button>
                         <button class="delete-list-btn" onclick="if(confirm('Delete {{ list_title }}?')){(function(btn){btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_action_data',value:'{{ list_id }}|||delete'});}})(this);}">🗑️</button>
+                      </div>
+                      <div class="reminder-section">
+                        <h4>Reminder Notifications</h4>
+                        <div class="reminder-row" style="flex-direction:column;align-items:flex-start;">
+                          <label>Notify:</label>
+                          <div class="r-targets" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                            {% set saved_targets = (config.get('targets','') or config.get('target','')) %}
+                            {% for n in notifiers %}{% if n != 'Nobody' %}
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;"><input type="checkbox" class="r-target-cb" value="{{ n }}" {{ 'checked' if n in saved_targets else '' }}><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
+                            {% endif %}{% endfor %}
+                          </div>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Every:</label>
+                          <select class="r-interval">
+                            {% for iv in ['30 minutes','1 hour','2 hours','4 hours','8 hours','12 hours','Once a day'] %}<option value="{{ iv }}" {{ 'selected' if config.get('interval','1 hour')==iv else '' }}>{{ iv }}</option>{% endfor %}
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="r-days">
+                            <option value="weekdays" {{ 'selected' if config.get('days','weekdays')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if config.get('days','weekdays')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if config.get('days','weekdays')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Title:</label>
+                          <input type="text" class="r-title" placeholder="List/Task name" value="{{ config.get('custom_title','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>Message:</label>
+                          <input type="text" class="r-message" placeholder="X item(s) remaining" value="{{ config.get('custom_message','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>From:</label>
+                          <input type="time" class="r-start" value="{{ config.get('start','09:00') }}">
+                          <label>To:</label>
+                          <input type="time" class="r-end" value="{{ config.get('end','21:00') }}">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ list_id }}',item_type:'checklist',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ list_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
+                        </div>
                       </div>
                     </div>
                   {% endif %}
@@ -549,7 +771,7 @@ views:
                   left:50%;
                   transform:translateX(-50%);
                   z-index:9999;
-                  background:#9C27B0;
+                  background:#2d3031;
                   color:white;
                   padding:12px 24px;
                   border-radius:8px;
@@ -572,12 +794,12 @@ views:
                   align-items: center;
                   margin-bottom: 12px;
                   padding-bottom: 12px;
-                  border-bottom: 2px solid #9C27B0;
+                  border-bottom: 2px solid #2d3031;
                 }
                 .task-title { font-size: 1.4em; font-weight: 600; color: var(--primary-text-color); }
                 .task-progress {
                   font-size: 0.9em;
-                  background: #9C27B0;
+                  background: #2d3031;
                   color: white;
                   padding: 4px 12px;
                   border-radius: 12px;
@@ -593,7 +815,7 @@ views:
                   gap: 8px;
                 }
                 .task-item:hover { background: var(--divider-color, #e0e0e0); }
-                .task-item.depth-1 { margin-left: 24px; border-left: 3px solid #673AB7; }
+                .task-item.depth-1 { margin-left: 24px; border-left: 3px solid #2d3031; }
                 .task-item.depth-2 { margin-left: 48px; border-left: 3px solid #9575CD; }
                 .task-item.depth-3 { margin-left: 72px; border-left: 3px solid #B39DDB; }
                 .task-item-text { flex-grow: 1; color: var(--primary-text-color); font-size: 1em; }
@@ -618,7 +840,7 @@ views:
                 }
                 .add-sub-btn {
                   padding: 2px 6px;
-                  background: #673AB7;
+                  background: #2d3031;
                   color: white;
                   border: none;
                   border-radius: 4px;
@@ -644,7 +866,7 @@ views:
                 }
                 .add-task-btn {
                   padding: 8px 16px;
-                  background: #9C27B0;
+                  background: #2d3031;
                   color: white;
                   border: none;
                   border-radius: 4px;
@@ -660,14 +882,14 @@ views:
                 }
                 .kanban-btn {
                   padding: 4px 12px;
-                  background: #673AB7;
+                  background: #2d3031;
                   color: white;
                   border: none;
                   border-radius: 4px;
                   cursor: pointer;
                 }
                 .status-todo { border-left: 3px solid #ff9800; }
-                .status-in_progress { border-left: 3px solid #2196F3; }
+                .status-in_progress { border-left: 3px solid #32373b; }
                 .status-completed { border-left: 3px solid #4CAF50; }
                 .status-section {
                   margin-top: 12px;
@@ -714,6 +936,40 @@ views:
                   width: 40px;
                   padding: 2px;
                 }
+                .reminder-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .reminder-btn:hover { background: rgba(156,39,176,0.1); }
+                .reminder-btn.active { color: #2d3031; }
+                .reminder-btn.inactive { opacity: 0.4; }
+                .header-actions {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                }
+                .reminder-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(103,58,183,0.1));
+                  border: 1px solid rgba(156,39,176,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .reminder-section.show { display: block; }
+                .reminder-section h4 { margin: 0 0 12px 0; color: #fff; }
+                .reminder-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+                .reminder-row label { font-size: 0.85em; color: var(--secondary-text-color); min-width: 50px; }
+                .reminder-row select, .reminder-row input[type="time"], .reminder-row input[type="text"] { padding: 6px 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.9em; }
+                .reminder-row select { min-width: 120px; }
+                .reminder-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(156,39,176,0.2); }
+                .reminder-save-btn { padding: 8px 16px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+                .reminder-remove-btn { padding: 8px 16px; background: var(--error-color, #ff5555); color: white; border: none; border-radius: 4px; cursor: pointer; }
               </style>
               <div id="jotty-loading-tasks">⏳ Processing...</div>
               <script>
@@ -730,6 +986,8 @@ views:
               </script>
               <div class="tasks-container">
                 {% set ns = namespace(count=0, tasks=[]) %}
+                {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Task:') and state.state != 'unavailable' %}
                     {% set ns.tasks = ns.tasks + [state] %}
@@ -744,10 +1002,15 @@ views:
                     {% set statuses = state_attr(state.entity_id, 'statuses') or [{'id':'todo','name':'To Do','order':0},{'id':'in_progress','name':'In Progress','order':1},{'id':'completed','name':'Completed','order':2}] %}
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
+                    {% set has_reminder = reminder_configs is mapping and task_id in reminder_configs %}
+                    {% set config = reminder_configs.get(task_id, {}) if reminder_configs is mapping else {} %}
                     <div class="task-card">
                       <div class="task-header">
                         <div class="task-title">{{ task_title }}</div>
-                        <div class="task-progress">{{ completed }}/{{ total }}</div>
+                        <div class="header-actions">
+                          <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <div class="task-progress">{{ completed }}/{{ total }}</div>
+                        </div>
                       </div>
                       <div class="task-items">
                         {% for item in flat_items %}
@@ -772,12 +1035,12 @@ views:
                             <option value="{{ status.id }}">{{ status.name }}</option>
                           {% endfor %}
                         </select>
-                        <button class="add-task-btn" onclick="(function(btn){const inp=btn.parentElement.querySelector('.add-task-input');const sel=btn.parentElement.querySelector('.task-status-select');if(!inp.value.trim())return;const txt=inp.value.trim();const st=sel.value;inp.value='';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt+'|||'+st});}setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add</button>
+                        <button class="add-task-btn" onclick="(function(btn){const inp=btn.parentElement.querySelector('.add-task-input');const sel=btn.parentElement.querySelector('.task-status-select');if(!inp.value.trim())return;const txt=inp.value.trim();const st=sel.value;inp.value='';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt+'|||'+st});}setTimeout(function(){btn.disabled=false;},2000);})(this);">Add Item</button>
                         <button class="kanban-btn" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.status-section');if(panel){panel.classList.toggle('show');}})(this);">⚙️ Columns</button>
                         <button class="delete-task-btn" onclick="if(confirm('Delete {{ task_title }}?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||delete'});}}">🗑️</button>
                       </div>
                       <div class="status-section">
-                        <strong>📊 Kanban Columns</strong>
+                        <strong>Kanban Task Columns</strong>
                         <div class="status-list">
                           {% for status in statuses | sort(attribute='order') %}
                             <div class="status-item">
@@ -795,7 +1058,51 @@ views:
                           <input type="text" placeholder="ID (e.g. review)" style="width:100px;" class="new-status-id">
                           <input type="text" placeholder="Label" style="width:120px;" class="new-status-label">
                           <input type="color" value="#3b82f6" class="new-status-color">
-                          <button class="add-task-btn" style="padding:6px 12px;" onclick="(function(btn){const form=btn.closest('.new-status-form');const idInp=form.querySelector('.new-status-id');const labelInp=form.querySelector('.new-status-label');const colorInp=form.querySelector('.new-status-color');if(!idInp.value.trim()||!labelInp.value.trim()){alert('ID and Label required');return;}btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'create_status|||{{ task_id }}|||'+idInp.value.trim()+'|||'+labelInp.value.trim()+'|||'+colorInp.value});}idInp.value='';labelInp.value='';setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add Column</button>
+                          <button class="add-task-btn" style="padding:6px 12px;" onclick="(function(btn){const form=btn.closest('.new-status-form');const idInp=form.querySelector('.new-status-id');const labelInp=form.querySelector('.new-status-label');const colorInp=form.querySelector('.new-status-color');if(!idInp.value.trim()||!labelInp.value.trim()){alert('ID and Label required');return;}btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'create_status|||{{ task_id }}|||'+idInp.value.trim()+'|||'+labelInp.value.trim()+'|||'+colorInp.value});}idInp.value='';labelInp.value='';setTimeout(function(){btn.disabled=false;},2000);})(this);">Add Column</button>
+                        </div>
+                      </div>
+                      <div class="reminder-section">
+                        <h4>Reminder Notifications</h4>
+                        <div class="reminder-row" style="flex-direction:column;align-items:flex-start;">
+                          <label>Notify:</label>
+                          <div class="r-targets" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                            {% set saved_targets = (config.get('targets','') or config.get('target','')) %}
+                            {% for n in notifiers %}{% if n != 'Nobody' %}
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;"><input type="checkbox" class="r-target-cb" value="{{ n }}" {{ 'checked' if n in saved_targets else '' }}><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
+                            {% endif %}{% endfor %}
+                          </div>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Every:</label>
+                          <select class="r-interval">
+                            {% for iv in ['30 minutes','1 hour','2 hours','4 hours','8 hours','12 hours','Once a day'] %}<option value="{{ iv }}" {{ 'selected' if config.get('interval','1 hour')==iv else '' }}>{{ iv }}</option>{% endfor %}
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="r-days">
+                            <option value="weekdays" {{ 'selected' if config.get('days','weekdays')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if config.get('days','weekdays')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if config.get('days','weekdays')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Title:</label>
+                          <input type="text" class="r-title" placeholder="List/Task name" value="{{ config.get('custom_title','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>Message:</label>
+                          <input type="text" class="r-message" placeholder="X item(s) remaining" value="{{ config.get('custom_message','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>From:</label>
+                          <input type="time" class="r-start" value="{{ config.get('start','09:00') }}">
+                          <label>To:</label>
+                          <input type="time" class="r-end" value="{{ config.get('end','21:00') }}">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ task_id }}',item_type:'task',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ task_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
                         </div>
                       </div>
                     </div>
@@ -810,27 +1117,27 @@ views:
               <style>
                 .tasks-container { padding: 4px; }
                 .task-card { background: var(--ha-card-background); border: 1px solid var(--divider-color); border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-                .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #9C27B0; }
+                .task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #2d3031; }
                 .task-title { font-size: 1.4em; font-weight: 600; }
-                .task-progress { font-size: 0.9em; background: #9C27B0; color: white; padding: 4px 12px; border-radius: 12px; }
+                .task-progress { font-size: 0.9em; background: #2d3031; color: white; padding: 4px 12px; border-radius: 12px; }
                 .task-items { margin-top: 12px; }
                 .task-item { display: flex; align-items: center; padding: 8px; margin-bottom: 4px; background: var(--secondary-background-color); border-radius: 8px; gap: 8px; }
                 .task-item:hover { background: var(--divider-color); }
-                .task-item.depth-1 { margin-left: 24px; border-left: 3px solid #673AB7; }
+                .task-item.depth-1 { margin-left: 24px; border-left: 3px solid #2d3031; }
                 .task-item.depth-2 { margin-left: 48px; border-left: 3px solid #9575CD; }
                 .task-item.depth-3 { margin-left: 72px; border-left: 3px solid #B39DDB; }
                 .task-item-text { flex-grow: 1; }
                 .task-item-text.completed { text-decoration: line-through; opacity: 0.6; }
                 .task-status-select { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.85em; cursor: pointer; }
                 .delete-item-btn { padding: 2px 8px; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
-                .add-sub-btn { padding: 2px 6px; background: #673AB7; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em; }
+                .add-sub-btn { padding: 2px 6px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75em; }
                 .add-task-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--divider-color); display: flex; gap: 8px; flex-wrap: wrap; }
                 .add-task-input { flex-grow: 1; min-width: 150px; padding: 8px 12px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); }
-                .add-task-btn { padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .add-task-btn { padding: 8px 16px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; }
                 .delete-task-btn { padding: 4px 12px; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
-                .kanban-btn { padding: 4px 12px; background: #673AB7; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .kanban-btn { padding: 4px 12px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; }
                 .status-todo { border-left: 3px solid #ff9800; }
-                .status-in_progress { border-left: 3px solid #2196F3; }
+                .status-in_progress { border-left: 3px solid #32373b; }
                 .status-completed { border-left: 3px solid #4CAF50; }
                 .status-section { margin-top: 12px; padding: 12px; background: var(--secondary-background-color); border-radius: 8px; display: none; }
                 .status-section.show { display: block; }
@@ -842,9 +1149,38 @@ views:
                 .new-status-form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider-color); }
                 .new-status-form input { padding: 6px 10px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); }
                 .new-status-form input[type="color"] { width: 40px; padding: 2px; }
+                .reminder-section { margin-top: 12px; padding: 12px; background: linear-gradient(135deg, rgba(156,39,176,0.1), rgba(103,58,183,0.1)); border: 1px solid rgba(156,39,176,0.3); border-radius: 8px; display: none; }
+                .reminder-section.show { display: block; }
+                .reminder-section h4 { margin: 0 0 12px 0; color: #fff; }
+                .reminder-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; align-items: center; }
+                .reminder-row label { font-size: 0.85em; color: var(--secondary-text-color); min-width: 50px; }
+                .reminder-row select, .reminder-row input[type="time"] { padding: 6px 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 0.9em; }
+                .reminder-row select { min-width: 120px; }
+                .reminder-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(156,39,176,0.2); }
+                .reminder-save-btn { padding: 8px 16px; background: #2d3031; color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .reminder-remove-btn { padding: 8px 16px; background: var(--error-color); color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .reminder-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .reminder-btn:hover { background: rgba(156,39,176,0.1); }
+                .reminder-btn.active { color: #2d3031; }
+                .reminder-btn.inactive { opacity: 0.4; }
+                .header-actions {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                }
               </style>
               <div class="tasks-container">
                 {% set ns = namespace(count=0, tasks=[]) %}
+                {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Task:') and state.state != 'unavailable' %}
                     {% set ns.tasks = ns.tasks + [state] %}
@@ -859,10 +1195,15 @@ views:
                     {% set statuses = state_attr(state.entity_id, 'statuses') or [{'id':'todo','name':'To Do','order':0},{'id':'in_progress','name':'In Progress','order':1},{'id':'completed','name':'Completed','order':2}] %}
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
+                    {% set has_reminder = reminder_configs is mapping and task_id in reminder_configs %}
+                    {% set config = reminder_configs.get(task_id, {}) if reminder_configs is mapping else {} %}
                     <div class="task-card">
                       <div class="task-header">
                         <div class="task-title">{{ task_title }}</div>
-                        <div class="task-progress">{{ completed }}/{{ total }}</div>
+                        <div class="header-actions">
+                          <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <div class="task-progress">{{ completed }}/{{ total }}</div>
+                        </div>
                       </div>
                       <div class="task-items">
                         {% for item in flat_items %}
@@ -887,12 +1228,12 @@ views:
                             <option value="{{ status.id }}">{{ status.name }}</option>
                           {% endfor %}
                         </select>
-                        <button class="add-task-btn" onclick="(function(btn){const inp=btn.parentElement.querySelector('.add-task-input');const sel=btn.parentElement.querySelector('.task-status-select');if(!inp.value.trim())return;const txt=inp.value.trim();const st=sel.value;inp.value='';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt+'|||'+st});}setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add</button>
-                        <button class="kanban-btn" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.status-section');if(panel){panel.classList.toggle('show');}})(this);">⚙️ Columns</button>
+                        <button class="add-task-btn" onclick="(function(btn){const inp=btn.parentElement.querySelector('.add-task-input');const sel=btn.parentElement.querySelector('.task-status-select');if(!inp.value.trim())return;const txt=inp.value.trim();const st=sel.value;inp.value='';btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||add|||'+txt+'|||'+st});}setTimeout(function(){btn.disabled=false;},2000);})(this);">Add Item</button>
+                        <button class="kanban-btn" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.status-section');if(panel){panel.classList.toggle('show');}})(this);">Task Categories</button>
                         <button class="delete-task-btn" onclick="if(confirm('Delete {{ task_title }}?')){const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_quick_task_action_data',value:'{{ task_id }}|||delete'});}}">🗑️</button>
                       </div>
                       <div class="status-section">
-                        <strong>📊 Kanban Columns</strong>
+                        <strong>Kanban Task Columns</strong>
                         <div class="status-list">
                           {% for status in statuses | sort(attribute='order') %}
                             <div class="status-item">
@@ -910,7 +1251,51 @@ views:
                           <input type="text" placeholder="ID (e.g. review)" style="width:100px;" class="new-status-id">
                           <input type="text" placeholder="Label" style="width:120px;" class="new-status-label">
                           <input type="color" value="#3b82f6" class="new-status-color">
-                          <button class="add-task-btn" style="padding:6px 12px;" onclick="(function(btn){const form=btn.closest('.new-status-form');const idInp=form.querySelector('.new-status-id');const labelInp=form.querySelector('.new-status-label');const colorInp=form.querySelector('.new-status-color');if(!idInp.value.trim()||!labelInp.value.trim()){alert('ID and Label required');return;}btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'create_status|||{{ task_id }}|||'+idInp.value.trim()+'|||'+labelInp.value.trim()+'|||'+colorInp.value});}idInp.value='';labelInp.value='';setTimeout(function(){btn.disabled=false;},2000);})(this);">➕ Add Column</button>
+                          <button class="add-task-btn" style="padding:6px 12px;" onclick="(function(btn){const form=btn.closest('.new-status-form');const idInp=form.querySelector('.new-status-id');const labelInp=form.querySelector('.new-status-label');const colorInp=form.querySelector('.new-status-color');if(!idInp.value.trim()||!labelInp.value.trim()){alert('ID and Label required');return;}btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('input_text','set_value',{entity_id:'input_text.jotty_kanban_action_data',value:'create_status|||{{ task_id }}|||'+idInp.value.trim()+'|||'+labelInp.value.trim()+'|||'+colorInp.value});}idInp.value='';labelInp.value='';setTimeout(function(){btn.disabled=false;},2000);})(this);">Add Task Column</button>
+                        </div>
+                      </div>
+                      <div class="reminder-section">
+                        <h4>Reminder Notification Settings</h4>
+                        <div class="reminder-row" style="flex-direction:column;align-items:flex-start;">
+                          <label>Notify:</label>
+                          <div class="r-targets" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                            {% set saved_targets = (config.get('targets','') or config.get('target','')) %}
+                            {% for n in notifiers %}{% if n != 'Nobody' %}
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.9em;cursor:pointer;"><input type="checkbox" class="r-target-cb" value="{{ n }}" {{ 'checked' if n in saved_targets else '' }}><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
+                            {% endif %}{% endfor %}
+                          </div>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Every:</label>
+                          <select class="r-interval">
+                            {% for iv in ['30 minutes','1 hour','2 hours','4 hours','8 hours','12 hours','Once a day'] %}<option value="{{ iv }}" {{ 'selected' if config.get('interval','1 hour')==iv else '' }}>{{ iv }}</option>{% endfor %}
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="r-days">
+                            <option value="weekdays" {{ 'selected' if config.get('days','weekdays')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if config.get('days','weekdays')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if config.get('days','weekdays')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Title:</label>
+                          <input type="text" class="r-title" placeholder="List/Task name" value="{{ config.get('custom_title','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>Message:</label>
+                          <input type="text" class="r-message" placeholder="X item(s) remaining" value="{{ config.get('custom_message','') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-row">
+                          <label>From:</label>
+                          <input type="time" class="r-start" value="{{ config.get('start','09:00') }}">
+                          <label>To:</label>
+                          <input type="time" class="r-end" value="{{ config.get('end','21:00') }}">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ task_id }}',item_type:'task',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ task_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
                         </div>
                       </div>
                     </div>
@@ -1016,6 +1401,12 @@ views:
                   - sensor.jotty_total_notes
                   - sensor.jotty_total_checklists
                   - sensor.jotty_total_tasks
+          - type: button
+            name: Refresh Notifiers
+            icon: mdi:bell-ring
+            tap_action:
+              action: call-service
+              service: script.jotty_refresh_notifiers
   - title: Stats
     path: stats
     icon: mdi:chart-box

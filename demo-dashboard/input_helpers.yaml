@@ -1,4 +1,28 @@
+# =============================================================================
+# JOTTY HOME ASSISTANT INTEGRATION VIA HACS
+# These helpers MUST be created for Jotty to work properly
+# Go to Settings > Devices & Services > Helpers > Create Helper
+# Create each helper exactly as specified below
+# =============================================================================
+
+#under input_text
 input_text:
+
+  jotty_editing_reminder_id:
+    name: "Editing Reminder ID"
+    initial: ""
+    max: 255
+
+  jotty_editing_reminder_type:
+    name: "Editing Reminder Type"
+    initial: ""
+    max: 20
+
+  jotty_editing_reminder_title:
+    name: "Editing Reminder Title"
+    initial: ""
+    max: 255
+    
   jotty_note_id:
     name: "Note ID"
     initial: ""
@@ -137,7 +161,39 @@ input_text:
     initial: ""
     max: 50
     icon: mdi:file-tree    
+
+
+#under input_select  
 input_select:
+  jotty_reminder_target:
+    name: "Remind Who"
+    options:
+      - "Nobody"
+    initial: "Nobody"
+    icon: mdi:account-bell
+
+  jotty_reminder_interval:
+    name: "Remind Every"
+    options:
+      - "30 minutes"
+      - "1 hour"
+      - "2 hours"
+      - "4 hours"
+      - "8 hours"
+      - "12 hours"
+      - "Once a day"
+    initial: "1 hour"
+    icon: mdi:timer-outline
+
+  jotty_reminder_days:
+    name: "On Days"
+    options:
+      - "Weekdays"
+      - "Weekends"
+      - "Every day"
+    initial: "Weekdays"
+    icon: mdi:calendar-week
+    
   jotty_status_picker:
     name: "Status Column Picker"
     options:
@@ -207,7 +263,8 @@ input_select:
       - "paused"
       - "completed"
     initial: "-- Select status --"
-    
+
+#under input_number 
 input_number:
   jotty_selected_item_index:
     name: "Selected Item Index"
@@ -224,7 +281,8 @@ input_number:
     step: 1
     mode: box
     icon: mdi:sort-numeric-ascending    
-    
+
+#under input_boolean    
 input_boolean:
   jotty_item_completed:
     name: "Item Completed"
@@ -234,3 +292,67 @@ input_boolean:
     name: "Is Loading"
     initial: false
     icon: mdi:loading
+
+  jotty_enable_reminder:
+    name: "Enable Reminder"
+    initial: false
+    icon: mdi:bell-plus
+
+  jotty_show_reminder_popup:
+    name: "Show Reminder Popup"
+    initial: false
+    icon: mdi:popup
+    
+input_datetime:    
+
+  jotty_reminder_start:
+    name: "From Time"
+    has_date: false
+    has_time: true
+
+  jotty_reminder_end:
+    name: "Until Time"
+    has_date: false
+    has_time: true
+
+#at the bottom of config    
+template:
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: event
+        event_type: jotty_reminder_update
+    sensor:
+      - name: "Jotty Reminders"
+        unique_id: jotty_reminders_storage
+        state: >
+          {% if trigger.platform == 'event' and trigger.event.data.configs is defined %}
+            {{ trigger.event.data.configs | length }}
+          {% else %}
+            {{ this.attributes.configs | default({}) | length }}
+          {% endif %}
+        attributes:
+          configs: >
+            {% if trigger.platform == 'event' and trigger.event.data.configs is defined %}
+              {{ trigger.event.data.configs }}
+            {% else %}
+              {{ this.attributes.configs | default({}) }}
+            {% endif %}
+            
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        hours: "/6"
+    sensor:
+      - name: "Jotty Available Notifiers"
+        unique_id: jotty_available_notifiers
+        state: "{{ this.attributes.notifiers | default([]) | length }}"
+        attributes:
+          notifiers: >
+            {% set devices = integration_entities('mobile_app') | select('match','device_tracker') | expand | map(attribute='name') | map('slugify') | list %}
+            {% set ns = namespace(services=[]) %}
+            {% for device in devices %}
+              {% set ns.services = ns.services + ['notify.mobile_app_' ~ device] %}
+            {% endfor %}
+            {{ ns.services }}    

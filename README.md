@@ -2,18 +2,25 @@
 
 Home Assistant/HACS integration for Jotty that enables you to manage notes and checklists directly from your Home Assistant dashboard.
 
-### 2.0 12/9/25 Merry Xmas
+### Version 2.1 (12/9/25) Notifications and Note Delivery
+- **Built in Reminder System**: Set up recurring notifications for incomplete list or task lists
+- **Multi device Support**: Send reminders to multiple home assistant devices simultaneously
+- **Flexible Scheduling**: Configure intervals, time windows, and day preferences
+- **Custom Messages**: Personalize notification titles and messages
+- **Send Notes to Devices**: Push notes directly to home assistant devices
 - **Task lists have been added!**: Create, edit, and delete task lists from Home Assistant
 - Create, edit, delete custom tasks statuses
 - Create sub tasks for task items
 - All tasks and items are imported as their own individual sensor
 
+![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview-notifications.gif)
 ![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview-tasks.gif)
 ![ha-hacs-jotty-preview](assets/ha-hacs-jotty-preview.gif)
 
-
 ### Basically it does this
 
+- **NEW!! 2.1 : Reminder System**: Set up recurring notifications for incomplete items with flexible scheduling
+- **NEW!! 2.1 : Send Notes To Devices**: Set notes directly to multiple devices
 - **NEW!! 2.0 : Tasklist Support**: Create and manage task lists!
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
 - **Checklist Support**: Create and manage simple checklists
@@ -283,12 +290,60 @@ data:
   task_id: "YOUR_TASK_ID"
 ```
 
-## Available Services
+### Reminder System
 
-### Notes
+The built-in reminder system allows you to set up recurring notifications for incomplete list and task items.
+
+**Set Up a Reminder via Script**:
+```yaml
+service: script.jotty_save_reminder_inline
+data:
+  item_id: "YOUR_LIST_OR_TASK_ID"
+  item_type: "checklist"  # or "task"
+  target: "notify.mobile_app_your_phone"
+  interval: "1 hour"
+  days: "weekdays"
+  start_time: "09:00"
+  end_time: "18:00"
+  custom_title: "Shopping Reminder"  # optional
+  custom_message: "Don't forget your shopping list!"  # optional
+```
+
+**Remove a Reminder**:
+```yaml
+service: script.jotty_remove_reminder_inline
+data:
+  item_id: "YOUR_LIST_OR_TASK_ID"
+```
+
+**Send Note to Mobile Devices**:
+```yaml
+service: script.jotty_send_note_to_devices
+data:
+  targets: "notify.mobile_app_phone1,notify.mobile_app_phone2"
+  title: "Important Note"
+  message: "This is the note content"
+```
+
+**Reminder Options**:
+
+| Option | Values |
+|--------|--------|
+| Interval | 30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, Once a day |
+| Days | Weekdays, Weekends, Every day |
+| Time Window | Any start/end time (e.g., 09:00 - 18:00) |
+
+## Service Reference
+
+### Note Services
+
+| Service | Description |
+|---------|-------------|
+| `jotty.create_note` | Create a new note |
+| `jotty.update_note` | Update existing note |
+| `jotty.delete_note` | Delete a note |
 
 #### jotty.create_note
-Create a new note in Jotty.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -296,155 +351,115 @@ Create a new note in Jotty.
 | content | string | No | The content of the note |
 
 #### jotty.update_note
-Update an existing note.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| note_id | string | Yes | The UUID of the note |
+| note_id | string | Yes | The UUID of the note to update |
 | title | string | No | New title for the note |
 | content | string | No | New content for the note |
 
 #### jotty.delete_note
-Delete a note from Jotty.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| note_id | string | Yes | The UUID of the note |
+| note_id | string | Yes | The UUID of the note to delete |
 
-### Checklists
+### Checklist Services
+
+| Service | Description |
+|---------|-------------|
+| `jotty.create_checklist` | Create a new checklist |
+| `jotty.delete_checklist` | Delete a checklist |
+| `jotty.add_checklist_item` | Add item to checklist |
+| `jotty.check_item` | Mark item as completed |
+| `jotty.uncheck_item` | Mark item as incomplete |
+| `jotty.delete_checklist_item` | Delete item from checklist |
 
 #### jotty.create_checklist
-Create a new checklist.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | title | string | Yes | The title of the checklist |
-| type | string | No | Type: "simple" or "task" (default: "simple") |
-
-#### jotty.update_checklist
-Update a checklist title.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| checklist_id | string | Yes | The UUID of the checklist |
-| title | string | No | New title for the checklist |
+| type | string | No | "simple" or "task" (default: "simple") |
 
 #### jotty.add_checklist_item
-Add an item to a checklist (supports nested items).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | checklist_id | string | Yes | The UUID of the checklist |
 | text | string | Yes | The text of the item |
-| status | string | No | Status for task lists: "todo", "in_progress", "paused", "completed" |
-| parent_index | string | No | Index path of parent for nested items (e.g., "0", "0.1", "2.0.1") |
+| status | string | No | Initial status (for task type) |
+| parent_index | string | No | Parent item index for nesting (e.g., "0" or "0.1") |
 
-#### jotty.check_item
-Mark a checklist item as completed (supports nested items).
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| checklist_id | string | Yes | The UUID of the checklist |
-| item_index | string | Yes | The index path of the item (e.g., "0" or "0.1" for nested) |
-
-#### jotty.uncheck_item
-Mark a checklist item as incomplete (supports nested items).
+#### jotty.check_item / jotty.uncheck_item
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | checklist_id | string | Yes | The UUID of the checklist |
-| item_index | string | Yes | The index path of the item |
+| item_index | string | Yes | Index path of the item (e.g., "0" or "0.1") |
 
 #### jotty.delete_checklist_item
-Delete an item from a checklist (supports nested items).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | checklist_id | string | Yes | The UUID of the checklist |
-| item_index | string | Yes | The index path of the item |
+| item_index | string | Yes | Index path of the item to delete |
 
-#### jotty.delete_checklist
-Delete a checklist from Jotty.
+### Task Services
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| checklist_id | string | Yes | The UUID of the checklist |
-
-### Task Lists (Kanban)
+| Service | Description |
+|---------|-------------|
+| `jotty.create_task` | Create a new task list |
+| `jotty.delete_task` | Delete a task list |
+| `jotty.add_task_item` | Add item to task list |
+| `jotty.update_task_item_status` | Change item status |
+| `jotty.delete_task_item` | Delete task item |
+| `jotty.get_task_statuses` | Get Kanban columns |
+| `jotty.create_task_status` | Create Kanban column |
+| `jotty.update_task_status` | Update Kanban column |
+| `jotty.delete_task_status` | Delete Kanban column |
 
 #### jotty.create_task
-Create a new task list with Kanban columns.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | title | string | Yes | The title of the task list |
 
-#### jotty.update_task
-Update a task list title.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| task_id | string | Yes | The UUID of the task list |
-| title | string | No | New title for the task list |
-
-#### jotty.delete_task
-Delete a task list from Jotty.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| task_id | string | Yes | The UUID of the task list |
-
 #### jotty.add_task_item
-Add an item to a task list (supports nested sub-tasks).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | task_id | string | Yes | The UUID of the task list |
 | text | string | Yes | The text of the task item |
 | status | string | No | Initial status (default: "todo") |
-| parent_index | string | No | Index path of parent for sub tasks (e.g., "0", "0.1") |
+| parent_index | string | No | Parent item index for sub tasks |
 
 #### jotty.update_task_item_status
-Change the status of a task item (move between Kanban columns).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | task_id | string | Yes | The UUID of the task list |
-| item_index | string | Yes | The index path of the item |
-| status | string | Yes | New status for the task |
-
-> **API Bug**: This endpoint returns success but doesn't persist changes. See [Known Issues](#known-issues).
+| item_index | string | Yes | Index path of the item |
+| status | string | Yes | New status value |
 
 #### jotty.delete_task_item
-Delete an item from a task list (supports nested items).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | task_id | string | Yes | The UUID of the task list |
-| item_index | string | Yes | The index path of the item |
-
-### Kanban Status Management
-
-#### jotty.get_task_statuses
-Get all Kanban column statuses for a task list.
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| task_id | string | Yes | The UUID of the task list |
+| item_index | string | Yes | Index path of the item to delete |
 
 #### jotty.create_task_status
-Add a new Kanban column to a task list.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | task_id | string | Yes | The UUID of the task list |
-| status_id | string | Yes | Unique identifier for the status (e.g., "review", "blocked") |
-| label | string | Yes | Display name for the status |
+| status_id | string | Yes | Unique identifier for the status |
+| label | string | Yes | Display name for the column |
 | color | string | No | Hex color code (e.g., "#3b82f6") |
-| order | integer | No | Display order (0-based) |
+| order | integer | No | Display order (lower = left) |
 
 #### jotty.update_task_status
-Update a Kanban column.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -455,6 +470,7 @@ Update a Kanban column.
 | order | integer | No | New display order |
 
 #### jotty.delete_task_status
+
 Delete a Kanban column (items move to first available status).
 
 | Field | Type | Required | Description |
@@ -478,12 +494,20 @@ The integration creates multiple sensors for monitoring your Jotty data:
 | `sensor.jotty_pending_items` | Number of pending (incomplete) items |
 | `sensor.jotty_completion_rate` | Overall completion rate percentage |
 
+### Template Sensors (for Reminder System)
+
+| Sensor | Description |
+|--------|-------------|
+| `sensor.jotty_reminders` | Stores reminder configurations for all lists/tasks |
+| `sensor.jotty_available_notifiers` | Lists available mobile app notification services |
+
 ### Dynamic Sensors
 
 The integration creates individual sensors for each note, checklist, and task:
 
 #### Note Sensors
-`sensor.jotty_note_[title]` - One sensor per note
+
+`sensor.jotty_note_[title]` One sensor per note
 
 **Attributes**:
 - `note_id`: UUID of the note
@@ -493,6 +517,7 @@ The integration creates individual sensors for each note, checklist, and task:
 - `updated`: Last update timestamp
 
 #### Checklist Sensors
+
 `sensor.jotty_list_[title]`  One sensor per checklist
 
 **Attributes**:
@@ -508,6 +533,7 @@ The integration creates individual sensors for each note, checklist, and task:
 - `updated`: Last update timestamp
 
 #### Task Sensors
+
 `sensor.jotty_task_[title]` One sensor per task list
 
 **Attributes**:
@@ -552,6 +578,7 @@ flat_items:
 ## Automation Examples
 
 ### Create Shopping List Every Sunday
+
 ```yaml
 automation:
   - alias: "Create Weekly Shopping List"
@@ -570,6 +597,7 @@ automation:
 ```
 
 ### Reminder Note When Leaving Home
+
 ```yaml
 automation:
   - alias: "Create Reminder When Leaving"
@@ -586,6 +614,7 @@ automation:
 ```
 
 ### Notify When Tasks Are Completed
+
 ```yaml
 automation:
   - alias: "Notify on Task Completion"
@@ -603,6 +632,7 @@ automation:
 ```
 
 ### Auto Create Daily Task List
+
 ```yaml
 automation:
   - alias: "Create Daily Tasks"
@@ -616,6 +646,7 @@ automation:
 ```
 
 ### Create Sprint Task List with Custom Columns
+
 ```yaml
 automation:
   - alias: "Create Sprint Board"
@@ -633,40 +664,70 @@ automation:
       # Add custom columns after creation via dashboard or additional service calls
 ```
 
+### Auto-Setup Reminder for New Lists
+
+```yaml
+automation:
+  - alias: "Auto Setup Shopping List Reminder"
+    trigger:
+      - platform: state
+        entity_id: sensor.jotty_total_checklists
+    condition:
+      - condition: template
+        value_template: "{{ 'Shopping' in trigger.to_state.attributes.get('titles', []) }}"
+    action:
+      - service: script.jotty_save_reminder_inline
+        data:
+          item_id: "{{ trigger.to_state.attributes.latest_id }}"
+          item_type: "checklist"
+          target: "notify.mobile_app_your_phone"
+          interval: "2 hours"
+          days: "every_day"
+          start_time: "09:00"
+          end_time: "20:00"
+```
+
 ## Dashboard Overview
 
 The included dashboard provides a complete interface for managing your notes, lists, and tasks:
 
 ### Notes Tab
+
 - Create new notes with title and content
 - Edit existing notes using dropdown picker
 - Delete notes with confirmation
 - View all notes with timestamps
 - See formatted content
+- Send notes to mobile devices
 
 ### Lists Tab
+
 - Create new checklists (simple type)
 - Add items directly from the card
 - Toggle item completion with checkboxes
 - Delete individual items
 - Delete entire lists with confirmation
 - View progress (completed/total)
+- Set up reminders for incomplete items
 
 ### Tasks Tab
+
 - Create new task lists (Kanban style)
 - Add tasks with initial status selection
 - Add sub tasks with the ➕ button on each item
 - View nested items with visual indentation
 - Status dropdown to move between columns (pending API fix)
-- Customize Kanban columns via ⚙️ Columns button:
+- Customize task list categories via Columns button:
   - View existing columns with colors
   - Rename columns
   - Delete columns
   - Add new custom columns with ID, label, and color
 - Delete individual tasks
 - Delete entire task lists with confirmation
+- Set up reminders for incomplete tasks
 
 ### Quick Actions Tab
+
 - One tap creation of common note types
 - Quick list templates
 - Shopping list creator
@@ -677,6 +738,7 @@ The included dashboard provides a complete interface for managing your notes, li
 - Update dropdowns button
 
 ### Statistics Tab
+
 - Visual statistics cards
 - Total notes count
 - Total lists count

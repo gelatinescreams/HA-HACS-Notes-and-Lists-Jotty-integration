@@ -1,4 +1,4 @@
-# Jotty Home Assistant Integration - Installation Guide
+# Jotty Home Assistant Integration Installation Guide
 
 ## Table of Contents
 
@@ -142,7 +142,7 @@ Helper entities are required for the dashboard and scripts to function. You can 
 
 Go to Settings > Devices & Services > Helpers and create each helper:
 
-**Text Helpers** (Create 22 text helpers):
+**Text Helpers** (Create 26 text helpers):
 
 | Name | Entity ID | Max Length |
 |------|-----------|------------|
@@ -169,8 +169,11 @@ Go to Settings > Devices & Services > Helpers and create each helper:
 | Edit Status ID | `input_text.jotty_edit_status_id` | 50 |
 | Edit Status Label | `input_text.jotty_edit_status_label` | 100 |
 | Edit Status Color | `input_text.jotty_edit_status_color` | 20 |
+| Editing Reminder ID | `input_text.jotty_editing_reminder_id` | 255 |
+| Editing Reminder Type | `input_text.jotty_editing_reminder_type` | 20 |
+| Editing Reminder Title | `input_text.jotty_editing_reminder_title` | 255 |
 
-**Hidden Text Helpers** (for dashboard actions - Create 4):
+**Hidden Text Helpers** (for dashboard actions : Create 4):
 
 | Name | Entity ID | Max Length |
 |------|-----------|------------|
@@ -179,7 +182,7 @@ Go to Settings > Devices & Services > Helpers and create each helper:
 | Quick Delete Item Data | `input_text.jotty_quick_delete_item_data` | 255 |
 | Kanban Action Data | `input_text.jotty_kanban_action_data` | 255 |
 
-**Dropdown Helpers** (Create 9 dropdown helpers):
+**Dropdown Helpers** (Create 12 dropdown helpers):
 
 | Name | Entity ID | Options |
 |------|-----------|---------|
@@ -193,6 +196,9 @@ Go to Settings > Devices & Services > Helpers and create each helper:
 | Task Item Picker | `input_select.jotty_task_item_picker` | -- Select task item -- |
 | New Task Item Status | `input_select.jotty_new_task_item_status` | todo, in_progress, completed |
 | Status Column Picker | `input_select.jotty_status_picker` | -- Select status -- |
+| Remind Who | `input_select.jotty_reminder_target` | Nobody |
+| Remind Every | `input_select.jotty_reminder_interval` | 30 minutes, 1 hour, 2 hours, 4 hours, 8 hours, 12 hours, Once a day |
+| On Days | `input_select.jotty_reminder_days` | Weekdays, Weekends, Every day |
 
 **Number Helpers** (Create 2 number helpers):
 
@@ -201,18 +207,74 @@ Go to Settings > Devices & Services > Helpers and create each helper:
 | Selected Item Index | `input_number.jotty_selected_item_index` | 0 | 1000 | 1 |
 | New Status Order | `input_number.jotty_new_status_order` | 0 | 20 | 1 |
 
-**Toggle Helpers** (Create 2 toggle helpers):
+**Toggle Helpers** (Create 4 toggle helpers):
 
-| Name | Entity ID |
-|------|-----------|
-| Item Completed | `input_boolean.jotty_item_completed` |
-| Is Loading | `input_boolean.jotty_is_loading` |
+| Name | Entity ID | Default |
+|------|-----------|---------|
+| Item Completed | `input_boolean.jotty_item_completed` | off |
+| Is Loading | `input_boolean.jotty_is_loading` | off |
+| Enable Reminder | `input_boolean.jotty_enable_reminder` | off |
+| Show Reminder Popup | `input_boolean.jotty_show_reminder_popup` | off |
+
+**DateTime Helpers** (Create 2 time-only helpers):
+
+| Name | Entity ID | Has Date | Has Time |
+|------|-----------|----------|----------|
+| From Time | `input_datetime.jotty_reminder_start` | No | Yes |
+| Until Time | `input_datetime.jotty_reminder_end` | No | Yes |
+
+**Template Sensors** (Add to configuration.yaml):
+
+Add these template sensors at the bottom of your `configuration.yaml`:
+
+```yaml
+template:
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: event
+        event_type: jotty_reminder_update
+    sensor:
+      - name: "Jotty Reminders"
+        unique_id: jotty_reminders_storage
+        state: >
+          {% if trigger.platform == 'event' and trigger.event.data.configs is defined %}
+            {{ trigger.event.data.configs | length }}
+          {% else %}
+            {{ this.attributes.configs | default({}) | length }}
+          {% endif %}
+        attributes:
+          configs: >
+            {% if trigger.platform == 'event' and trigger.event.data.configs is defined %}
+              {{ trigger.event.data.configs }}
+            {% else %}
+              {{ this.attributes.configs | default({}) }}
+            {% endif %}
+            
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        hours: "/6"
+    sensor:
+      - name: "Jotty Available Notifiers"
+        unique_id: jotty_available_notifiers
+        state: "{{ this.attributes.notifiers | default([]) | length }}"
+        attributes:
+          notifiers: >
+            {% set devices = integration_entities('mobile_app') | select('match','device_tracker') | expand | map(attribute='name') | map('slugify') | list %}
+            {% set ns = namespace(services=[]) %}
+            {% for device in devices %}
+              {% set ns.services = ns.services + ['notify.mobile_app_' ~ device] %}
+            {% endfor %}
+            {{ ns.services }}
+```
 
 ### Step 2: Add Scripts
 
-Scripts provide the functionality to create, edit, and delete notes, checklists, and tasks.
+Scripts provide the functionality for the dashboard buttons and automation triggers.
 
-1. Open your `scripts.yaml` file (or create it if it doesn't exist)
+1. Open your `scripts.yaml` file
 2. Copy all contents from `demo-dashboard/scripts.yaml`
 3. Paste at the bottom of your `scripts.yaml` file (do not overwrite existing content)
 4. Save the file
@@ -226,12 +288,20 @@ Scripts provide the functionality to create, edit, and delete notes, checklists,
 | `jotty_create_note` | Create a new note |
 | `jotty_update_note` | Update an existing note |
 | `jotty_delete_note` | Delete a note |
+| `jotty_save_edited_note` | Save changes to edited note |
+| `jotty_delete_edited_note` | Delete note being edited |
+| `jotty_delete_note_by_id` | Delete note by ID directly |
 | `jotty_create_checklist` | Create a new checklist |
 | `jotty_add_item` | Add item to checklist |
 | `jotty_check_item` | Mark item as completed |
 | `jotty_uncheck_item` | Mark item as incomplete |
 | `jotty_delete_checklist` | Delete a checklist |
 | `jotty_delete_checklist_item` | Delete a checklist item |
+| `jotty_toggle_item_completion` | Toggle item complete/incomplete |
+| `jotty_update_task_status` | Update task item status |
+| `jotty_add_item_to_selected_list` | Add item to currently selected list |
+| `jotty_quick_check_item` | Quick check item by index |
+| `jotty_quick_uncheck_item` | Quick uncheck item by index |
 | `jotty_create_task` | Create a new task list (Kanban) |
 | `jotty_delete_task` | Delete a task list |
 | `jotty_add_task_item` | Add item to task list |
@@ -244,6 +314,17 @@ Scripts provide the functionality to create, edit, and delete notes, checklists,
 | `jotty_force_update_note_picker` | Refresh note dropdown |
 | `jotty_force_update_checklist_picker` | Refresh checklist dropdown |
 | `jotty_force_update_task_picker` | Refresh task dropdown |
+| `jotty_update_both_dropdowns` | Update all dropdowns at once |
+| `jotty_refresh_dashboard_data` | Refresh all dashboard data |
+| `jotty_load_reminder` | Load reminder configuration for an item |
+| `jotty_save_reminder` | Save reminder from popup dialog |
+| `jotty_open_reminder_for_list` | Open reminder popup for a checklist |
+| `jotty_open_reminder_for_task` | Open reminder popup for a task |
+| `jotty_refresh_notifiers` | Refresh available notification services |
+| `jotty_save_reminder_inline` | Save reminder via service call |
+| `jotty_remove_reminder_inline` | Remove reminder via service call |
+| `jotty_update_last_sent` | Update last sent timestamp for reminder |
+| `jotty_send_note_to_devices` | Send note content to mobile devices |
 
 ### Step 3: Add Automations
 
@@ -260,9 +341,9 @@ Automations keep the dashboard synchronized with your Jotty data.
 
 | Automation | Description |
 |------------|-------------|
-| `jotty_auto_update_note_picker` | Auto-refresh note dropdown when notes change |
-| `jotty_auto_update_checklist_picker` | Auto-refresh checklist dropdown |
-| `jotty_auto_update_task_picker` | Auto-refresh task dropdown |
+| `jotty_auto_update_note_picker` | Auto refresh note dropdown when notes change |
+| `jotty_auto_update_checklist_picker` | Auto- efresh checklist dropdown |
+| `jotty_auto_update_task_picker` | Auto refresh task dropdown |
 | `jotty_load_note_when_picked` | Load note data when selected |
 | `jotty_load_checklist_when_picked` | Load checklist data when selected |
 | `jotty_load_checklist_items` | Load items for selected checklist |
@@ -273,6 +354,10 @@ Automations keep the dashboard synchronized with your Jotty data.
 | `jotty_quick_task_actions` | Handle task actions from dashboard |
 | `jotty_quick_delete_item` | Handle item deletion from dashboard |
 | `jotty_kanban_actions` | Handle Kanban column management |
+| `jotty_load_reminder_on_popup` | Load reminder config when popup opens |
+| `jotty_close_reminder_popup` | Clear reminder data when popup closes |
+| `jotty_check_reminders` | Check reminders every 30 minutes and send notifications |
+| `jotty_handle_notification_actions` | Handle snooze/open actions from notifications |
 
 ### Step 4: Add Dashboard
 
@@ -293,10 +378,10 @@ The prebuilt Lovelace dashboard provides a complete user interface.
 
 | Tab | Features |
 |-----|----------|
-| **Notes** | Create, edit, delete notes; view all notes with timestamps |
-| **Lists** | Create checklists; add/check/uncheck items; delete items; progress tracking |
-| **Tasks** | Create Kanban boards; add tasks with status; add sub-tasks; manage columns |
-| **Quick Actions** | One-tap templates for common lists and notes |
+| **Notes** | Create, edit, delete notes; view all notes with timestamps; send notes to devices |
+| **Lists** | Create checklists; add/check/uncheck items; delete items; progress tracking; set reminders |
+| **Tasks** | Create Kanban boards; add tasks with status; add sub tasks; manage columns; set reminders |
+| **Quick Actions** | One tap templates for common lists and notes |
 | **Statistics** | Total counts, completion rates, visual progress |
 
 
@@ -324,6 +409,8 @@ Go to Developer Tools > States and search for "jotty". You should see:
 | `sensor.jotty_completed_items` | Completed items count |
 | `sensor.jotty_pending_items` | Pending items count |
 | `sensor.jotty_completion_rate` | Overall completion percentage |
+| `sensor.jotty_reminders` | Reminder configurations storage |
+| `sensor.jotty_available_notifiers` | Available mobile app notifiers |
 
 Plus individual sensors for each note (`sensor.jotty_note_*`), checklist (`sensor.jotty_list_*`), and task (`sensor.jotty_task_*`).
 
@@ -346,6 +433,12 @@ Plus individual sensors for each note (`sensor.jotty_note_*`), checklist (`senso
 3. Add task items with status selection
 4. Use ⚙️ Columns to customize Kanban columns
 
+**Test Reminder System:**
+1. Create a checklist with at least one item
+2. Click the 🔔 button on the list
+3. Enable the reminder and configure settings
+4. Save and verify `sensor.jotty_reminders` has the configuration
+
 ### 4. Verify in Jotty App
 
 - Open your Jotty mobile or desktop app
@@ -360,7 +453,7 @@ Plus individual sensors for each note (`sensor.jotty_note_*`), checklist (`senso
 
 **Affected Operations**:
 - Moving items between Kanban columns via status dropdown
-- Both top-level and nested items affected
+- Both top level and nested items affected
 
 **Workaround**: 
 - Create items with the correct initial status
@@ -403,10 +496,25 @@ Plus individual sensors for each note (`sensor.jotty_note_*`), checklist (`senso
   - `script.jotty_force_update_task_picker`
 - Check automations are enabled
 
-### Sub-tasks Not Appearing
+### Sub tasks Not Appearing
 
 - Ensure using `flat_items` attribute (not `items`) for nested display
 - Each item has `index_path` attribute (e.g., "0", "0.1", "0.1.2")
+
+### Reminders Not Working
+
+- Verify `sensor.jotty_reminders` exists and has `configs` attribute
+- Check `sensor.jotty_available_notifiers` lists your devices
+- Run `script.jotty_refresh_notifiers` to update device list
+- Ensure automations `jotty_check_reminders` is enabled
+- Check Home Assistant logs for notification errors
+
+### Template Sensors Not Creating
+
+- Verify the template sensor configuration is correctly formatted
+- Check for YAML syntax errors in Developer Tools > YAML > Check Configuration
+- Ensure templates are at the root level (not nested under another key)
+- Restart Home Assistant after adding template sensors
 
 ## Getting Help
 
