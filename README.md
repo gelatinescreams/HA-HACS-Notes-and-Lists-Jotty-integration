@@ -20,7 +20,7 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 ### Basically it does this
 
 - **NEW!! 2.1 : Reminder System**: Set up recurring notifications for incomplete items with flexible scheduling
-- **NEW!! 2.1 : Send Notes To Devices**: Set notes directly to multiple devices
+- **NEW!! 2.1 : Send Notes To Devices**: Send notes directly to multiple devices
 - **NEW!! 2.0 : Tasklist Support**: Create and manage task lists!
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
 - **Checklist Support**: Create and manage simple checklists
