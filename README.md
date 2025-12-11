@@ -2,7 +2,8 @@
 
 Home Assistant/HACS integration for Jotty that enables you to manage notes and checklists directly from your Home Assistant dashboard.
 
-### Version 2.1 (12/9/25) Notifications and Note Delivery
+### Version 2.2 (12/11/25) Notifications and Note Delivery
+*Thank you discord testers!*
 - **Built in Reminder System**: Set up recurring notifications for incomplete list or task lists
 - **Multi device Support**: Send reminders to multiple home assistant devices simultaneously
 - **Flexible Scheduling**: Configure intervals, time windows, and day preferences
