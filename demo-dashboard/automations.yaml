@@ -699,38 +699,28 @@
                 {% endif %}
               {% endif %}
           - variables:
+              sensor_entity: >
+                {% if item_type == 'task' %}
+                  {% for s in states.sensor | selectattr('attributes.task_id', 'defined') %}
+                    {% if s.attributes.task_id == item_id %}{{ s.entity_id }}{% endif %}
+                  {% endfor %}
+                {% else %}
+                  {% for s in states.sensor | selectattr('attributes.checklist_id', 'defined') %}
+                    {% if s.attributes.checklist_id == item_id %}{{ s.entity_id }}{% endif %}
+                  {% endfor %}
+                {% endif %}
+          - condition: template
+            value_template: "{{ sensor_entity | trim != '' }}"
+          - variables:
               has_incomplete: >
-                {% if item_type == 'task' %}
-                  {% set sensor_name = 'sensor.jotty_task_' ~ item_id.replace('-', '_') %}
-                  {% set total = state_attr(sensor_name, 'total') | default(0) %}
-                  {% set completed = state_attr(sensor_name, 'completed') | default(0) %}
-                  {{ total > completed }}
-                {% else %}
-                  {% set sensor_name = 'sensor.jotty_list_' ~ item_id.replace('-', '_') %}
-                  {% set total = state_attr(sensor_name, 'total') | default(0) %}
-                  {% set completed = state_attr(sensor_name, 'completed') | default(0) %}
-                  {{ total > completed }}
-                {% endif %}
-              item_title: >
-                {% if item_type == 'task' %}
-                  {% set sensor_name = 'sensor.jotty_task_' ~ item_id.replace('-', '_') %}
-                  {{ state_attr(sensor_name, 'title') | default('Task') }}
-                {% else %}
-                  {% set sensor_name = 'sensor.jotty_list_' ~ item_id.replace('-', '_') %}
-                  {{ state_attr(sensor_name, 'title') | default('List') }}
-                {% endif %}
+                {% set total = state_attr(sensor_entity, 'total') | default(0) %}
+                {% set completed = state_attr(sensor_entity, 'completed') | default(0) %}
+                {{ total > completed }}
+              item_title: "{{ state_attr(sensor_entity, 'title') | default('Reminder') }}"
               incomplete_count: >
-                {% if item_type == 'task' %}
-                  {% set sensor_name = 'sensor.jotty_task_' ~ item_id.replace('-', '_') %}
-                  {% set total = state_attr(sensor_name, 'total') | default(0) %}
-                  {% set completed = state_attr(sensor_name, 'completed') | default(0) %}
-                  {{ total - completed }}
-                {% else %}
-                  {% set sensor_name = 'sensor.jotty_list_' ~ item_id.replace('-', '_') %}
-                  {% set total = state_attr(sensor_name, 'total') | default(0) %}
-                  {% set completed = state_attr(sensor_name, 'completed') | default(0) %}
-                  {{ total - completed }}
-                {% endif %}
+                {% set total = state_attr(sensor_entity, 'total') | default(0) %}
+                {% set completed = state_attr(sensor_entity, 'completed') | default(0) %}
+                {{ total - completed }}
           - condition: template
             value_template: "{{ has_incomplete }}"
           - variables:

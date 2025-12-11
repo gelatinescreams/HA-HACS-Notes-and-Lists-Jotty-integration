@@ -1152,12 +1152,14 @@ jotty_update_last_sent:
     - variables:
         current_config: "{{ configs[item_id] }}"
         updated_config:
-          target: "{{ current_config.target }}"
+          targets: "{{ current_config.targets | default(current_config.target | default('')) }}"
           interval: "{{ current_config.interval }}"
           days: "{{ current_config.days }}"
           start: "{{ current_config.start }}"
           end: "{{ current_config.end }}"
           type: "{{ current_config.type }}"
+          custom_title: "{{ current_config.custom_title | default('') }}"
+          custom_message: "{{ current_config.custom_message | default('') }}"
           last_sent: "{{ now().strftime('%Y-%m-%d %H:%M') }}"
         updated_configs: "{{ dict(configs, **{item_id: updated_config}) }}"
     - event: jotty_reminder_update

@@ -19,7 +19,7 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 
 ### Basically it does this
 
-- **NEW!! 2.1 : Reminder System**: Set up recurring notifications for incomplete items with flexible scheduling
+- **NEW!! 2.2 : Reminder System**: Set up recurring notifications for incomplete items with flexible scheduling. [2.1 to 2.2 fix here](#21to22)
 - **NEW!! 2.1 : Send Notes To Devices**: Send notes directly to multiple devices
 - **NEW!! 2.0 : Tasklist Support**: Create and manage task lists!
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
@@ -791,3 +791,8 @@ This applies to all services that accept `item_index` or `parent_index` paramete
 - Clean old notes and list from sensors (May not be possbile automatically)
 - Advanced filtering and search
 - Calendar integration for task deadlines
+
+## 2.1to2.2
+
+- Update the entire jotty_update_last_sent block in your scripts.yaml with the new one from 2.2
+- Update the entire jotty_check_reminders block in your automations.yaml with the new one from 2.2
