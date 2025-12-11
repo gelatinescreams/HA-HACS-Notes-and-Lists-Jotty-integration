@@ -687,8 +687,9 @@
               {% if last_sent == '' %}
                 true
               {% else %}
-                {% set last = strptime(last_sent, '%Y-%m-%d %H:%M') %}
-                {% set mins = ((now() - last).total_seconds() / 60) | int %}
+                {% set last_ts = as_timestamp(strptime(last_sent, '%Y-%m-%d %H:%M', now())) %}
+                {% set now_ts = as_timestamp(now()) %}
+                {% set mins = ((now_ts - last_ts) / 60) | int %}
                 {% if interval == '30 minutes' %}{{ mins >= 30 }}
                 {% elif interval == '1 hour' %}{{ mins >= 60 }}
                 {% elif interval == '2 hours' %}{{ mins >= 120 }}
@@ -700,27 +701,29 @@
               {% endif %}
           - variables:
               sensor_entity: >
+                {% set ns = namespace(found='') %}
                 {% if item_type == 'task' %}
-                  {% for s in states.sensor | selectattr('attributes.task_id', 'defined') %}
-                    {% if s.attributes.task_id == item_id %}{{ s.entity_id }}{% endif %}
+                  {% for s in states.sensor %}
+                    {% if s.attributes.task_id is defined and s.attributes.task_id == item_id %}
+                      {% set ns.found = s.entity_id %}
+                    {% endif %}
                   {% endfor %}
                 {% else %}
-                  {% for s in states.sensor | selectattr('attributes.checklist_id', 'defined') %}
-                    {% if s.attributes.checklist_id == item_id %}{{ s.entity_id }}{% endif %}
+                  {% for s in states.sensor %}
+                    {% if s.attributes.checklist_id is defined and s.attributes.checklist_id == item_id %}
+                      {% set ns.found = s.entity_id %}
+                    {% endif %}
                   {% endfor %}
                 {% endif %}
+                {{ ns.found }}
           - condition: template
             value_template: "{{ sensor_entity | trim != '' }}"
           - variables:
-              has_incomplete: >
-                {% set total = state_attr(sensor_entity, 'total') | default(0) %}
-                {% set completed = state_attr(sensor_entity, 'completed') | default(0) %}
-                {{ total > completed }}
+              total_items: "{{ state_attr(sensor_entity, 'total') | int(0) }}"
+              completed_items: "{{ state_attr(sensor_entity, 'completed') | int(0) }}"
+              has_incomplete: "{{ total_items > completed_items }}"
               item_title: "{{ state_attr(sensor_entity, 'title') | default('Reminder') }}"
-              incomplete_count: >
-                {% set total = state_attr(sensor_entity, 'total') | default(0) %}
-                {% set completed = state_attr(sensor_entity, 'completed') | default(0) %}
-                {{ total - completed }}
+              incomplete_count: "{{ total_items - completed_items }}"
           - condition: template
             value_template: "{{ has_incomplete }}"
           - variables:
@@ -728,18 +731,8 @@
               custom_message: "{{ config.custom_message | default('') }}"
               targets: "{{ config.targets | default(config.target | default('')) }}"
               target_list: "{{ targets.split(',') if targets else [] }}"
-              notification_title: >
-                {% if custom_title != '' %}
-                  {{ custom_title }}
-                {% else %}
-                  {{ item_title }}
-                {% endif %}
-              notification_message: >
-                {% if custom_message != '' %}
-                  {{ custom_message }}
-                {% else %}
-                  {{ incomplete_count }} item(s) remaining
-                {% endif %}
+              notification_title: "{% if custom_title != '' %}{{ custom_title }}{% else %}{{ item_title }}{% endif %}"
+              notification_message: "{% if custom_message != '' %}{{ custom_message }}{% else %}{{ incomplete_count }} item(s) remaining{% endif %}"
           - repeat:
               count: "{{ target_list | length }}"
               sequence:
