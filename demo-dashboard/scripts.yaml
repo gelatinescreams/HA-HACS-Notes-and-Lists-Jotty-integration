@@ -565,6 +565,7 @@ jotty_delete_note_by_id:
     data:
       title: Note Deleted
       message: Note has been deleted successfully!
+      
 jotty_create_task:
   alias: "Jotty: Create Task List"
   icon: mdi:clipboard-plus
@@ -1165,7 +1166,7 @@ jotty_update_last_sent:
     - event: jotty_reminder_update
       event_data:
         configs: "{{ updated_configs }}"
-        
+
 jotty_send_note_to_devices:
   alias: "Jotty: Send Note to Devices"
   fields:
@@ -1191,4 +1192,152 @@ jotty_send_note_to_devices:
       data:
         title: "Note Sent"
         message: "Sent '{{ title }}' to {{ target_list | length }} device(s)"
-        notification_id: jotty_note_sent   
+        notification_id: jotty_note_sent       
+        
+jotty_save_recurring:
+  alias: "Jotty: Save Recurring"
+  fields:
+    item_id:
+      description: "List/task ID"
+    item_type:
+      description: "checklist or task"
+    days:
+      description: "weekdays, weekends, or every_day"
+    reset_times:
+      description: "Comma separated times like 06:00,14:00"
+  sequence:
+    - variables:
+        configs: "{{ state_attr('sensor.jotty_recurring', 'configs') or {} }}"
+    - condition: template
+      value_template: "{{ item_id != '' and reset_times != '' }}"
+    - variables:
+        times_list: "{{ reset_times.split(',') | map('trim') | list }}"
+        new_config:
+          type: "{{ item_type }}"
+          days: "{{ days }}"
+          reset_times: "{{ times_list }}"
+        safe_configs: "{{ configs if configs is mapping else {} }}"
+        updated_configs: "{{ dict(safe_configs, **{item_id: new_config}) }}"
+    - event: jotty_recurring_update
+      event_data:
+        configs: "{{ updated_configs }}"
+    - service: persistent_notification.create
+      data:
+        title: "Recurring Reset Saved"
+        message: "Will reset at: {{ times_list | join(', ') }}"
+        notification_id: jotty_recurring_saved
+
+jotty_remove_recurring:
+  alias: "Jotty: Remove Recurring"
+  fields:
+    item_id:
+      description: "List/task ID"
+  sequence:
+    - variables:
+        configs: "{{ state_attr('sensor.jotty_recurring', 'configs') or {} }}"
+    - condition: template
+      value_template: "{{ configs is mapping and item_id in configs }}"
+    - variables:
+        updated_configs: >
+          {% set safe_configs = configs if configs is mapping else {} %}
+          {% set ns = namespace(result={}) %}
+          {% for key, val in safe_configs.items() %}
+            {% if key != item_id %}
+              {% set ns.result = dict(ns.result, **{key: val}) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.result }}
+    - event: jotty_recurring_update
+      event_data:
+        configs: "{{ updated_configs }}"
+    - service: persistent_notification.create
+      data:
+        title: "Recurring Reset Removed"
+        message: "Recurring reset has been removed"
+        notification_id: jotty_recurring_saved
+
+jotty_reset_checklist:
+  alias: "Jotty: Reset Checklist Items"
+  fields:
+    checklist_id:
+      description: "Checklist ID to reset"
+  sequence:
+    - variables:
+        sensor_entity: >
+          {% set ns = namespace(found='') %}
+          {% for s in states.sensor %}
+            {% if s.attributes.checklist_id is defined and s.attributes.checklist_id == checklist_id %}
+              {% set ns.found = s.entity_id %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.found }}
+    - condition: template
+      value_template: "{{ sensor_entity | trim != '' }}"
+    - service: homeassistant.update_entity
+      data:
+        entity_id: "{{ sensor_entity }}"
+    - delay:
+        seconds: 2
+    - variables:
+        flat_items: "{{ state_attr(sensor_entity, 'flat_items') | default([]) }}"
+        completed_indices: >
+          {% set ns = namespace(indices=[]) %}
+          {% for item in flat_items %}
+            {% if item.completed | default(false) == true %}
+              {% set ns.indices = ns.indices + [item.index_path] %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.indices | reverse | list }}
+    - repeat:
+        for_each: "{{ completed_indices }}"
+        sequence:
+          - service: jotty.uncheck_item
+            data:
+              checklist_id: "{{ checklist_id }}"
+              item_index: "{{ repeat.item }}"
+          - delay:
+              seconds: 1
+
+jotty_reset_task:
+  alias: "Jotty: Reset Task Items"
+  fields:
+    task_id:
+      description: "Task ID to reset"
+  sequence:
+    - variables:
+        sensor_entity: >
+          {% set ns = namespace(found='') %}
+          {% for s in states.sensor %}
+            {% if s.attributes.task_id is defined and s.attributes.task_id == task_id %}
+              {% set ns.found = s.entity_id %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.found }}
+    - condition: template
+      value_template: "{{ sensor_entity | trim != '' }}"
+    - service: homeassistant.update_entity
+      data:
+        entity_id: "{{ sensor_entity }}"
+    - delay:
+        seconds: 2
+    - variables:
+        flat_items: "{{ state_attr(sensor_entity, 'flat_items') | default([]) }}"
+        non_todo_indices: >
+          {% set ns = namespace(indices=[]) %}
+          {% for item in flat_items %}
+            {% if item.status | default('todo') != 'todo' %}
+              {% set ns.indices = ns.indices + [item.index_path] %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.indices | reverse | list }}
+    - repeat:
+        for_each: "{{ non_todo_indices }}"
+        sequence:
+          - service: jotty.update_task_item_status
+            data:
+              task_id: "{{ task_id }}"
+              item_index: "{{ repeat.item }}"
+              status: "todo"
+          - delay:
+              seconds: 1
+      

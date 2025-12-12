@@ -398,6 +398,28 @@ views:
                 .reminder-btn:hover { background: rgba(156,39,176,0.1); }
                 .reminder-btn.active { color: #2d3031; }
                 .reminder-btn.inactive { opacity: 0.4; }
+                .recurring-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .recurring-btn:hover { background: rgba(76,175,80,0.1); }
+                .recurring-btn.active { color: #4CAF50; }
+                .recurring-btn.inactive { opacity: 0.4; }
+                .recurring-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(56,142,60,0.1));
+                  border: 1px solid rgba(76,175,80,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .recurring-section.show { display: block; }
+                .recurring-section h4 { margin: 0 0 12px 0; color: #4CAF50; }
                 .header-actions {
                   display: flex;
                   align-items: center;
@@ -438,6 +460,7 @@ views:
               <div class="lists-container">
                 {% set ns = namespace(count=0, lists=[]) %}
                 {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set recurring_configs = state_attr('sensor.jotty_recurring', 'configs') or {} %}
                 {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty List:') and state.state != 'unavailable' %}
@@ -456,12 +479,15 @@ views:
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
                     {% set has_reminder = reminder_configs is mapping and list_id in reminder_configs %}
+                    {% set has_recurring = recurring_configs is mapping and list_id in recurring_configs %}
                     {% set config = reminder_configs.get(list_id, {}) if reminder_configs is mapping else {} %}
+                    {% set rec_config = recurring_configs.get(list_id, {}) if recurring_configs is mapping else {} %}
                     <div class="list-card">
                       <div class="list-header">
                         <div class="list-title">{{ list_title }}</div>
                         <div class="header-actions">
                           <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.list-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <button class="recurring-btn {{ 'active' if has_recurring else 'inactive' }}" title="{{ 'Edit recurring reset' if has_recurring else 'Add recurring reset' }}" onclick="(function(btn){var panel=btn.closest('.list-card').querySelector('.recurring-section');if(panel){panel.classList.toggle('show');}})(this);">♻️</button>
                           <div class="list-progress">{{ completed }}/{{ total }}</div>
                         </div>
                       </div>
@@ -521,6 +547,62 @@ views:
                         <div class="reminder-actions">
                           <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ list_id }}',item_type:'checklist',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save Notification';sec.classList.remove('show');},1500);})(this);">Save Notification</button>
                           <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ list_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
+                        </div>
+                      </div>
+                      <div class="recurring-section">
+                        <h4>Recurring Settings</h4>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="rec-days">
+                            <option value="weekdays" {{ 'selected' if rec_config.get('days','every_day')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if rec_config.get('days','every_day')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if rec_config.get('days','every_day')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Preset:</label>
+                          <select class="rec-preset" onchange="(function(sel){var t=sel.closest('.recurring-section').querySelector('.rec-times');if(sel.value!='custom'){t.value=sel.value;}t.style.display=sel.value=='custom'?'block':'none';})(this);" style="flex:1;min-width:180px;">
+                            <option value="custom">Pick One</option>
+                            <optgroup label="Once Daily">
+                              <option value="05:00">5:00 AM</option>
+                              <option value="06:00">6:00 AM</option>
+                              <option value="07:00">7:00 AM</option>
+                              <option value="08:00">8:00 AM</option>
+                              <option value="09:00">9:00 AM</option>
+                              <option value="12:00">12:00 PM</option>
+                              <option value="18:00">6:00 PM</option>
+                              <option value="21:00">9:00 PM</option>
+                              <option value="00:00">12:00 AM (midnight)</option>
+                            </optgroup>
+                            <optgroup label="Twice Daily">
+                              <option value="06:00, 18:00">6:00 AM, 6:00 PM</option>
+                              <option value="06:00, 21:00">6:00 AM, 9:00 PM</option>
+                              <option value="08:00, 20:00">8:00 AM, 8:00 PM</option>
+                              <option value="09:00, 17:00">9:00 AM, 5:00 PM</option>
+                              <option value="09:00, 21:00">9:00 AM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Three Times Daily">
+                              <option value="06:00, 12:00, 18:00">6:00 AM, 12:00 PM, 6:00 PM</option>
+                              <option value="06:00, 12:00, 21:00">6:00 AM, 12:00 PM, 9:00 PM</option>
+                              <option value="07:00, 12:00, 19:00">7:00 AM, 12:00 PM, 7:00 PM</option>
+                              <option value="08:00, 14:00, 20:00">8:00 AM, 2:00 PM, 8:00 PM</option>
+                              <option value="09:00, 15:00, 21:00">9:00 AM, 3:00 PM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Frequent">
+                              <option value="06:00, 14:00, 22:00">Every 8 hours (6 AM, 2 PM, 10 PM)</option>
+                              <option value="06:00, 12:00, 18:00, 00:00">Every 6 hours (6 AM, 12 PM, 6 PM, 12 AM)</option>
+                              <option value="06:00, 10:00, 14:00, 18:00, 22:00">Every 4 hours (6 AM - 10 PM)</option>
+                              <option value="06:00, 09:00, 12:00, 15:00, 18:00, 21:00">Every 3 hours (6 AM - 9 PM)</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div class="reminder-row" style="display:{{ 'flex' if rec_config.get('reset_times') else 'none' }};">
+                          <label>Times:</label>
+                          <input type="text" class="rec-times" placeholder="06:00, 14:00" value="{{ rec_config.get('reset_times', []) | join(', ') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" style="background:#4CAF50;" onclick="(function(btn){var sec=btn.closest('.recurring-section');var d=sec.querySelector('.rec-days').value;var preset=sec.querySelector('.rec-preset').value;var timesInput=sec.querySelector('.rec-times');var t=preset!='custom'?preset:timesInput.value;if(!t.trim()){alert('Select a preset or enter custom times');return;}btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_recurring',{item_id:'{{ list_id }}',item_type:'checklist',days:d,reset_times:t});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove recurring reset?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_recurring',{item_id:'{{ list_id }}'});}var sec=btn.closest('.recurring-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
                         </div>
                       </div>
                     </div>
@@ -622,6 +704,28 @@ views:
                 .reminder-btn:hover { background: rgba(156,39,176,0.1); }
                 .reminder-btn.active { color: #2d3031; }
                 .reminder-btn.inactive { opacity: 0.4; }
+                .recurring-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .recurring-btn:hover { background: rgba(76,175,80,0.1); }
+                .recurring-btn.active { color: #4CAF50; }
+                .recurring-btn.inactive { opacity: 0.4; }
+                .recurring-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(56,142,60,0.1));
+                  border: 1px solid rgba(76,175,80,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .recurring-section.show { display: block; }
+                .recurring-section h4 { margin: 0 0 12px 0; color: #4CAF50; }
                 .header-actions {
                   display: flex;
                   align-items: center;
@@ -648,6 +752,7 @@ views:
               <div class="lists-container">
                 {% set ns = namespace(count=0, lists=[]) %}
                 {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set recurring_configs = state_attr('sensor.jotty_recurring', 'configs') or {} %}
                 {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty List:') and state.state != 'unavailable' %}
@@ -666,12 +771,15 @@ views:
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
                     {% set has_reminder = reminder_configs is mapping and list_id in reminder_configs %}
+                    {% set has_recurring = recurring_configs is mapping and list_id in recurring_configs %}
                     {% set config = reminder_configs.get(list_id, {}) if reminder_configs is mapping else {} %}
+                    {% set rec_config = recurring_configs.get(list_id, {}) if recurring_configs is mapping else {} %}
                     <div class="list-card">
                       <div class="list-header">
                         <div class="list-title">{{ list_title }}</div>
                         <div class="header-actions">
                           <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.list-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <button class="recurring-btn {{ 'active' if has_recurring else 'inactive' }}" title="{{ 'Edit recurring reset' if has_recurring else 'Add recurring reset' }}" onclick="(function(btn){var panel=btn.closest('.list-card').querySelector('.recurring-section');if(panel){panel.classList.toggle('show');}})(this);">♻️</button>
                           <div class="list-progress">{{ completed }}/{{ total }}</div>
                         </div>
                       </div>
@@ -731,6 +839,62 @@ views:
                         <div class="reminder-actions">
                           <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ list_id }}',item_type:'checklist',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
                           <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ list_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
+                        </div>
+                      </div>
+                      <div class="recurring-section">
+                        <h4>Recurring Settings</h4>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="rec-days">
+                            <option value="weekdays" {{ 'selected' if rec_config.get('days','every_day')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if rec_config.get('days','every_day')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if rec_config.get('days','every_day')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Preset:</label>
+                          <select class="rec-preset" onchange="(function(sel){var t=sel.closest('.recurring-section').querySelector('.rec-times');if(sel.value!='custom'){t.value=sel.value;}t.style.display=sel.value=='custom'?'block':'none';})(this);" style="flex:1;min-width:180px;">
+                            <option value="custom">Pick One</option>
+                            <optgroup label="Once Daily">
+                              <option value="05:00">5:00 AM</option>
+                              <option value="06:00">6:00 AM</option>
+                              <option value="07:00">7:00 AM</option>
+                              <option value="08:00">8:00 AM</option>
+                              <option value="09:00">9:00 AM</option>
+                              <option value="12:00">12:00 PM</option>
+                              <option value="18:00">6:00 PM</option>
+                              <option value="21:00">9:00 PM</option>
+                              <option value="00:00">12:00 AM (midnight)</option>
+                            </optgroup>
+                            <optgroup label="Twice Daily">
+                              <option value="06:00, 18:00">6:00 AM, 6:00 PM</option>
+                              <option value="06:00, 21:00">6:00 AM, 9:00 PM</option>
+                              <option value="08:00, 20:00">8:00 AM, 8:00 PM</option>
+                              <option value="09:00, 17:00">9:00 AM, 5:00 PM</option>
+                              <option value="09:00, 21:00">9:00 AM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Three Times Daily">
+                              <option value="06:00, 12:00, 18:00">6:00 AM, 12:00 PM, 6:00 PM</option>
+                              <option value="06:00, 12:00, 21:00">6:00 AM, 12:00 PM, 9:00 PM</option>
+                              <option value="07:00, 12:00, 19:00">7:00 AM, 12:00 PM, 7:00 PM</option>
+                              <option value="08:00, 14:00, 20:00">8:00 AM, 2:00 PM, 8:00 PM</option>
+                              <option value="09:00, 15:00, 21:00">9:00 AM, 3:00 PM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Frequent">
+                              <option value="06:00, 14:00, 22:00">Every 8 hours (6 AM, 2 PM, 10 PM)</option>
+                              <option value="06:00, 12:00, 18:00, 00:00">Every 6 hours (6 AM, 12 PM, 6 PM, 12 AM)</option>
+                              <option value="06:00, 10:00, 14:00, 18:00, 22:00">Every 4 hours (6 AM - 10 PM)</option>
+                              <option value="06:00, 09:00, 12:00, 15:00, 18:00, 21:00">Every 3 hours (6 AM - 9 PM)</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div class="reminder-row" style="display:{{ 'flex' if rec_config.get('reset_times') else 'none' }};">
+                          <label>Times:</label>
+                          <input type="text" class="rec-times" placeholder="06:00, 14:00" value="{{ rec_config.get('reset_times', []) | join(', ') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" style="background:#4CAF50;" onclick="(function(btn){var sec=btn.closest('.recurring-section');var d=sec.querySelector('.rec-days').value;var preset=sec.querySelector('.rec-preset').value;var timesInput=sec.querySelector('.rec-times');var t=preset!='custom'?preset:timesInput.value;if(!t.trim()){alert('Select a preset or enter custom times');return;}btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_recurring',{item_id:'{{ list_id }}',item_type:'checklist',days:d,reset_times:t});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove recurring reset?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_recurring',{item_id:'{{ list_id }}'});}var sec=btn.closest('.recurring-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
                         </div>
                       </div>
                     </div>
@@ -948,6 +1112,28 @@ views:
                 .reminder-btn:hover { background: rgba(156,39,176,0.1); }
                 .reminder-btn.active { color: #2d3031; }
                 .reminder-btn.inactive { opacity: 0.4; }
+                .recurring-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .recurring-btn:hover { background: rgba(76,175,80,0.1); }
+                .recurring-btn.active { color: #4CAF50; }
+                .recurring-btn.inactive { opacity: 0.4; }
+                .recurring-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(56,142,60,0.1));
+                  border: 1px solid rgba(76,175,80,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .recurring-section.show { display: block; }
+                .recurring-section h4 { margin: 0 0 12px 0; color: #4CAF50; }
                 .header-actions {
                   display: flex;
                   align-items: center;
@@ -987,6 +1173,7 @@ views:
               <div class="tasks-container">
                 {% set ns = namespace(count=0, tasks=[]) %}
                 {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set recurring_configs = state_attr('sensor.jotty_recurring', 'configs') or {} %}
                 {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Task:') and state.state != 'unavailable' %}
@@ -1003,12 +1190,15 @@ views:
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
                     {% set has_reminder = reminder_configs is mapping and task_id in reminder_configs %}
+                    {% set has_recurring = recurring_configs is mapping and task_id in recurring_configs %}
                     {% set config = reminder_configs.get(task_id, {}) if reminder_configs is mapping else {} %}
+                    {% set rec_config = recurring_configs.get(task_id, {}) if recurring_configs is mapping else {} %}
                     <div class="task-card">
                       <div class="task-header">
                         <div class="task-title">{{ task_title }}</div>
                         <div class="header-actions">
                           <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <button class="recurring-btn {{ 'active' if has_recurring else 'inactive' }}" title="{{ 'Edit recurring reset' if has_recurring else 'Add recurring reset' }}" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.recurring-section');if(panel){panel.classList.toggle('show');}})(this);">♻️</button>
                           <div class="task-progress">{{ completed }}/{{ total }}</div>
                         </div>
                       </div>
@@ -1105,6 +1295,62 @@ views:
                           <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ task_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
                         </div>
                       </div>
+                      <div class="recurring-section">
+                        <h4>Recurring Settings</h4>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="rec-days">
+                            <option value="weekdays" {{ 'selected' if rec_config.get('days','every_day')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if rec_config.get('days','every_day')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if rec_config.get('days','every_day')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Preset:</label>
+                          <select class="rec-preset" onchange="(function(sel){var t=sel.closest('.recurring-section').querySelector('.rec-times');if(sel.value!='custom'){t.value=sel.value;}t.style.display=sel.value=='custom'?'block':'none';})(this);" style="flex:1;min-width:180px;">
+                            <option value="custom">Pick One</option>
+                            <optgroup label="Once Daily">
+                              <option value="05:00">5:00 AM</option>
+                              <option value="06:00">6:00 AM</option>
+                              <option value="07:00">7:00 AM</option>
+                              <option value="08:00">8:00 AM</option>
+                              <option value="09:00">9:00 AM</option>
+                              <option value="12:00">12:00 PM</option>
+                              <option value="18:00">6:00 PM</option>
+                              <option value="21:00">9:00 PM</option>
+                              <option value="00:00">12:00 AM (midnight)</option>
+                            </optgroup>
+                            <optgroup label="Twice Daily">
+                              <option value="06:00, 18:00">6:00 AM, 6:00 PM</option>
+                              <option value="06:00, 21:00">6:00 AM, 9:00 PM</option>
+                              <option value="08:00, 20:00">8:00 AM, 8:00 PM</option>
+                              <option value="09:00, 17:00">9:00 AM, 5:00 PM</option>
+                              <option value="09:00, 21:00">9:00 AM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Three Times Daily">
+                              <option value="06:00, 12:00, 18:00">6:00 AM, 12:00 PM, 6:00 PM</option>
+                              <option value="06:00, 12:00, 21:00">6:00 AM, 12:00 PM, 9:00 PM</option>
+                              <option value="07:00, 12:00, 19:00">7:00 AM, 12:00 PM, 7:00 PM</option>
+                              <option value="08:00, 14:00, 20:00">8:00 AM, 2:00 PM, 8:00 PM</option>
+                              <option value="09:00, 15:00, 21:00">9:00 AM, 3:00 PM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Frequent">
+                              <option value="06:00, 14:00, 22:00">Every 8 hours (6 AM, 2 PM, 10 PM)</option>
+                              <option value="06:00, 12:00, 18:00, 00:00">Every 6 hours (6 AM, 12 PM, 6 PM, 12 AM)</option>
+                              <option value="06:00, 10:00, 14:00, 18:00, 22:00">Every 4 hours (6 AM - 10 PM)</option>
+                              <option value="06:00, 09:00, 12:00, 15:00, 18:00, 21:00">Every 3 hours (6 AM - 9 PM)</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div class="reminder-row" style="display:{{ 'flex' if rec_config.get('reset_times') else 'none' }};">
+                          <label>Times:</label>
+                          <input type="text" class="rec-times" placeholder="06:00, 14:00" value="{{ rec_config.get('reset_times', []) | join(', ') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" style="background:#4CAF50;" onclick="(function(btn){var sec=btn.closest('.recurring-section');var d=sec.querySelector('.rec-days').value;var preset=sec.querySelector('.rec-preset').value;var timesInput=sec.querySelector('.rec-times');var t=preset!='custom'?preset:timesInput.value;if(!t.trim()){alert('Select a preset or enter custom times');return;}btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_recurring',{item_id:'{{ task_id }}',item_type:'task',days:d,reset_times:t});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove recurring reset?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_recurring',{item_id:'{{ task_id }}'});}var sec=btn.closest('.recurring-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
+                        </div>
+                      </div>
                     </div>
                   {% endif %}
                 {% endfor %}
@@ -1171,6 +1417,28 @@ views:
                 .reminder-btn:hover { background: rgba(156,39,176,0.1); }
                 .reminder-btn.active { color: #2d3031; }
                 .reminder-btn.inactive { opacity: 0.4; }
+                .recurring-btn {
+                  background: none;
+                  border: none;
+                  cursor: pointer;
+                  padding: 4px 8px;
+                  font-size: 1.1em;
+                  border-radius: 4px;
+                  transition: all 0.2s;
+                }
+                .recurring-btn:hover { background: rgba(76,175,80,0.1); }
+                .recurring-btn.active { color: #4CAF50; }
+                .recurring-btn.inactive { opacity: 0.4; }
+                .recurring-section {
+                  margin-top: 12px;
+                  padding: 12px;
+                  background: linear-gradient(135deg, rgba(76,175,80,0.1), rgba(56,142,60,0.1));
+                  border: 1px solid rgba(76,175,80,0.3);
+                  border-radius: 8px;
+                  display: none;
+                }
+                .recurring-section.show { display: block; }
+                .recurring-section h4 { margin: 0 0 12px 0; color: #4CAF50; }
                 .header-actions {
                   display: flex;
                   align-items: center;
@@ -1180,6 +1448,7 @@ views:
               <div class="tasks-container">
                 {% set ns = namespace(count=0, tasks=[]) %}
                 {% set reminder_configs = state_attr('sensor.jotty_reminders', 'configs') or {} %}
+                {% set recurring_configs = state_attr('sensor.jotty_recurring', 'configs') or {} %}
                 {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Task:') and state.state != 'unavailable' %}
@@ -1196,12 +1465,15 @@ views:
                     {% set completed = state_attr(state.entity_id, 'completed') %}
                     {% set total = state_attr(state.entity_id, 'total') %}
                     {% set has_reminder = reminder_configs is mapping and task_id in reminder_configs %}
+                    {% set has_recurring = recurring_configs is mapping and task_id in recurring_configs %}
                     {% set config = reminder_configs.get(task_id, {}) if reminder_configs is mapping else {} %}
+                    {% set rec_config = recurring_configs.get(task_id, {}) if recurring_configs is mapping else {} %}
                     <div class="task-card">
                       <div class="task-header">
                         <div class="task-title">{{ task_title }}</div>
                         <div class="header-actions">
                           <button class="reminder-btn {{ 'active' if has_reminder else 'inactive' }}" title="{{ 'Edit reminder' if has_reminder else 'Add reminder' }}" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.reminder-section');if(panel){panel.classList.toggle('show');}})(this);">🔔</button>
+                          <button class="recurring-btn {{ 'active' if has_recurring else 'inactive' }}" title="{{ 'Edit recurring reset' if has_recurring else 'Add recurring reset' }}" onclick="(function(btn){var panel=btn.closest('.task-card').querySelector('.recurring-section');if(panel){panel.classList.toggle('show');}})(this);">♻️</button>
                           <div class="task-progress">{{ completed }}/{{ total }}</div>
                         </div>
                       </div>
@@ -1296,6 +1568,62 @@ views:
                         <div class="reminder-actions">
                           <button class="reminder-save-btn" onclick="(function(btn){var sec=btn.closest('.reminder-section');var t=Array.from(sec.querySelectorAll('.r-target-cb:checked')).map(cb=>cb.value).join(',');if(!t){alert('Select at least one device');return;}var i=sec.querySelector('.r-interval').value;var d=sec.querySelector('.r-days').value;var s=sec.querySelector('.r-start').value;var e=sec.querySelector('.r-end').value;var ti=sec.querySelector('.r-title').value;var m=sec.querySelector('.r-message').value;btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_reminder_inline',{item_id:'{{ task_id }}',item_type:'task',target:t,interval:i,days:d,start_time:s,end_time:e,custom_title:ti,custom_message:m});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
                           <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove reminder?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_reminder_inline',{item_id:'{{ task_id }}'});}var sec=btn.closest('.reminder-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
+                        </div>
+                      </div>
+                      <div class="recurring-section">
+                        <h4>Recurring Settings</h4>
+                        <div class="reminder-row">
+                          <label>Days:</label>
+                          <select class="rec-days">
+                            <option value="weekdays" {{ 'selected' if rec_config.get('days','every_day')=='weekdays' else '' }}>Weekdays</option>
+                            <option value="weekends" {{ 'selected' if rec_config.get('days','every_day')=='weekends' else '' }}>Weekends</option>
+                            <option value="every_day" {{ 'selected' if rec_config.get('days','every_day')=='every_day' else '' }}>Every day</option>
+                          </select>
+                        </div>
+                        <div class="reminder-row">
+                          <label>Preset:</label>
+                          <select class="rec-preset" onchange="(function(sel){var t=sel.closest('.recurring-section').querySelector('.rec-times');if(sel.value!='custom'){t.value=sel.value;}t.style.display=sel.value=='custom'?'block':'none';})(this);" style="flex:1;min-width:180px;">
+                            <option value="custom">Pick One</option>
+                            <optgroup label="Once Daily">
+                              <option value="05:00">5:00 AM</option>
+                              <option value="06:00">6:00 AM</option>
+                              <option value="07:00">7:00 AM</option>
+                              <option value="08:00">8:00 AM</option>
+                              <option value="09:00">9:00 AM</option>
+                              <option value="12:00">12:00 PM</option>
+                              <option value="18:00">6:00 PM</option>
+                              <option value="21:00">9:00 PM</option>
+                              <option value="00:00">12:00 AM (midnight)</option>
+                            </optgroup>
+                            <optgroup label="Twice Daily">
+                              <option value="06:00, 18:00">6:00 AM, 6:00 PM</option>
+                              <option value="06:00, 21:00">6:00 AM, 9:00 PM</option>
+                              <option value="08:00, 20:00">8:00 AM, 8:00 PM</option>
+                              <option value="09:00, 17:00">9:00 AM, 5:00 PM</option>
+                              <option value="09:00, 21:00">9:00 AM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Three Times Daily">
+                              <option value="06:00, 12:00, 18:00">6:00 AM, 12:00 PM, 6:00 PM</option>
+                              <option value="06:00, 12:00, 21:00">6:00 AM, 12:00 PM, 9:00 PM</option>
+                              <option value="07:00, 12:00, 19:00">7:00 AM, 12:00 PM, 7:00 PM</option>
+                              <option value="08:00, 14:00, 20:00">8:00 AM, 2:00 PM, 8:00 PM</option>
+                              <option value="09:00, 15:00, 21:00">9:00 AM, 3:00 PM, 9:00 PM</option>
+                            </optgroup>
+                            <optgroup label="Frequent">
+                              <option value="06:00, 14:00, 22:00">Every 8 hours (6 AM, 2 PM, 10 PM)</option>
+                              <option value="06:00, 12:00, 18:00, 00:00">Every 6 hours (6 AM, 12 PM, 6 PM, 12 AM)</option>
+                              <option value="06:00, 10:00, 14:00, 18:00, 22:00">Every 4 hours (6 AM - 10 PM)</option>
+                              <option value="06:00, 09:00, 12:00, 15:00, 18:00, 21:00">Every 3 hours (6 AM - 9 PM)</option>
+                            </optgroup>
+                          </select>
+                        </div>
+                        <div class="reminder-row" style="display:{{ 'flex' if rec_config.get('reset_times') else 'none' }};">
+                          <label>Times:</label>
+                          <input type="text" class="rec-times" placeholder="06:00, 14:00" value="{{ rec_config.get('reset_times', []) | join(', ') }}" style="flex:1;min-width:150px;">
+                        </div>
+                        <div class="reminder-actions">
+                          <button class="reminder-save-btn" style="background:#4CAF50;" onclick="(function(btn){var sec=btn.closest('.recurring-section');var d=sec.querySelector('.rec-days').value;var preset=sec.querySelector('.rec-preset').value;var timesInput=sec.querySelector('.rec-times');var t=preset!='custom'?preset:timesInput.value;if(!t.trim()){alert('Select a preset or enter custom times');return;}btn.disabled=true;btn.textContent='Saving...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_save_recurring',{item_id:'{{ task_id }}',item_type:'task',days:d,reset_times:t});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="reminder-remove-btn" onclick="(function(btn){if(!confirm('Remove recurring reset?'))return;btn.disabled=true;const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_remove_recurring',{item_id:'{{ task_id }}'});}var sec=btn.closest('.recurring-section');setTimeout(function(){sec.classList.remove('show');},1000);})(this);">🗑️ Remove</button>
                         </div>
                       </div>
                     </div>

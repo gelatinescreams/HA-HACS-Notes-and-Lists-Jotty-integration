@@ -2,15 +2,15 @@
 
 Home Assistant/HACS integration for Jotty that enables you to manage notes and checklists directly from your Home Assistant dashboard.
 
-### Version 2.2 (12/11/25) Notifications and Note Delivery
+### Version 2.3 (12/21/25) Recurring Lists and Tasks
 *Thank you discord testers!*
-- [2.1 to 2.2 fix here](#21to22) Simply replace 1 script and 1 automation
-- **Built in Reminder System**: Set up recurring notifications for incomplete list or task lists
+- **Recurring lists and tasks**: Set up recurring notifications for incomplete list or task lists
+- **Reminder System**: Set up recurring notifications for incomplete list or task lists
 - **Multi device Support**: Send reminders to multiple home assistant devices simultaneously
 - **Flexible Scheduling**: Configure intervals, time windows, and day preferences
 - **Custom Messages**: Personalize notification titles and messages
 - **Send Notes to Devices**: Push notes directly to home assistant devices
-- **Task lists have been added!**: Create, edit, and delete task lists from Home Assistant
+- **Task lists have been added!**: Create and manage task lists with infinte nestes subtasks!
 - Create, edit, delete custom tasks statuses
 - Create sub tasks for task items
 - All tasks and items are imported as their own individual sensor
@@ -21,9 +21,10 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 
 ### Basically it does this
 
+- **NEW!! 2.3 : Recurring lists and tasks**: Set up recurring lists and tasks with flexible scheduling.
 - **NEW!! 2.2 : Reminder System**: Set up recurring notifications for incomplete items with flexible scheduling.
 - **NEW!! 2.1 : Send Notes To Devices**: Send notes directly to multiple devices
-- **NEW!! 2.0 : Tasklist Support**: Create and manage task lists!
+- **NEW!! 2.0 : Tasklist Support**: Create and manage task lists with infinte nestes subtasks!
 - **Full Note Management**: Create, edit, and delete notes from Home Assistant
 - **Checklist Support**: Create and manage simple checklists
 - **Real Time Synchronization**: Changes sync with your Jotty server automatically
@@ -55,11 +56,6 @@ This category is REQUIRED for the integration to work. All notes and lists creat
 ## Installation
 
 Complete instructions are available in the [Jotty: Notes and lists for Home Assistant Installation Guide](INSTALLATION.md).
-
-## Notification blueprint
-*a ready made notficiation blueprint for this integration is available below*
-
-[![Notification blueprint](https://community-assets.home-assistant.io/original/4X/d/7/6/d7625545838a4970873f3a996172212440b7e0ae.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://raw.githubusercontent.com/gelatinescreams/HA-HACS-Notes-and-Lists-Jotty-integration/refs/heads/main/blueprints/automation/jotty_notifications_blueprint.yaml)
 
 ## Usage
 
@@ -793,8 +789,3 @@ This applies to all services that accept `item_index` or `parent_index` paramete
 - Clean old notes and list from sensors (May not be possbile automatically)
 - Advanced filtering and search
 - Calendar integration for task deadlines
-
-## 2.1to2.2
-
-- Update the entire jotty_update_last_sent block in your scripts.yaml with the new one from 2.2
-- Update the entire jotty_check_reminders block in your automations.yaml with the new one from 2.2

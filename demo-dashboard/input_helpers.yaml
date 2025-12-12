@@ -8,6 +8,27 @@
 #under input_text
 input_text:
 
+  jotty_editing_recurring_id:
+    name: "Editing Recurring ID"
+    initial: ""
+    max: 255
+
+  jotty_editing_recurring_type:
+    name: "Editing Recurring Type"
+    initial: ""
+    max: 20
+
+  jotty_editing_recurring_title:
+    name: "Editing Recurring Title"
+    initial: ""
+    max: 255
+
+  jotty_recurring_reset_times:
+    name: "Reset Times"
+    initial: "06:00"
+    max: 255
+    icon: mdi:clock-outline
+    
   jotty_editing_reminder_id:
     name: "Editing Reminder ID"
     initial: ""
@@ -160,11 +181,21 @@ input_text:
     name: "Parent Item Index"
     initial: ""
     max: 50
-    icon: mdi:file-tree    
-
+    icon: mdi:file-tree  
 
 #under input_select  
 input_select:
+
+  jotty_recurring_days:
+    name: "Recurring Days"
+    options:
+      - "Weekdays"
+      - "Weekends"
+      - "Every day"
+    initial: "Every day"
+    icon: mdi:calendar-week
+
+
   jotty_reminder_target:
     name: "Remind Who"
     options:
@@ -266,6 +297,7 @@ input_select:
 
 #under input_number 
 input_number:
+
   jotty_selected_item_index:
     name: "Selected Item Index"
     min: 0
@@ -284,6 +316,12 @@ input_number:
 
 #under input_boolean    
 input_boolean:
+
+  jotty_show_recurring_popup:
+    name: "Show Recurring Popup"
+    initial: false
+    icon: mdi:recycle
+    
   jotty_item_completed:
     name: "Item Completed"
     initial: false
@@ -317,6 +355,7 @@ input_datetime:
 
 #at the bottom of config    
 template:
+
   - trigger:
       - platform: homeassistant
         event: start
@@ -338,7 +377,7 @@ template:
             {% else %}
               {{ this.attributes.configs | default({}) }}
             {% endif %}
-            
+
   - trigger:
       - platform: homeassistant
         event: start
@@ -355,4 +394,25 @@ template:
             {% for device in devices %}
               {% set ns.services = ns.services + ['notify.mobile_app_' ~ device] %}
             {% endfor %}
-            {{ ns.services }}    
+            {{ ns.services }}
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: event
+        event_type: jotty_recurring_update
+    sensor:
+      - name: "Jotty Recurring"
+        unique_id: jotty_recurring_storage
+        state: >
+          {% if trigger.platform == 'event' and trigger.event.data.configs is defined %}
+            {{ trigger.event.data.configs | length }}
+          {% else %}
+            {{ this.attributes.configs | default({}) | length }}
+          {% endif %}
+        attributes:
+          configs: >
+            {% if trigger.platform == 'event' and trigger.event.data.configs is defined %}
+              {{ trigger.event.data.configs }}
+            {% else %}
+              {{ this.attributes.configs | default({}) }}
+            {% endif %}      
