@@ -2,8 +2,10 @@
 
 Home Assistant/HACS integration for Jotty that enables you to manage notes and checklists directly from your Home Assistant dashboard.
 
-### Version 2.3 (12/21/25) Recurring Lists and Tasks
+### Version 2.4 (12/16/25) Recurring Lists and Tasks
 *Thank you discord testers!*
+- **Unlimited text**: Broke the 255 input limit of home assistant. Notes can now be as long as you want. Inlcudes markdown and richtext.
+- **Scheduled Notes**: Set up notifications notes for any specific time and date
 - **Recurring lists and tasks**: Set up recurring notifications for incomplete list or task lists
 - **Reminder System**: Set up recurring notifications for incomplete list or task lists
 - **Multi device Support**: Send reminders to multiple home assistant devices simultaneously
@@ -21,6 +23,8 @@ Home Assistant/HACS integration for Jotty that enables you to manage notes and c
 
 ### Basically it does this
 
+- **NEW!! 2.4 : Unlimited text**: Broke the 255 input limit of home assistant. Notes can now be as long as you want. Inlcudes markdown and richtext.
+- **NEW!! 2.4 : Scheduled Notes**: Set up notifications notes for any specific time and date
 - **NEW!! 2.3 : Recurring lists and tasks**: Set up recurring lists and tasks with flexible scheduling.
 - **NEW!! 2.2 : Reminder System**: Set up recurring notifications for incomplete items with flexible scheduling.
 - **NEW!! 2.1 : Send Notes To Devices**: Send notes directly to multiple devices
