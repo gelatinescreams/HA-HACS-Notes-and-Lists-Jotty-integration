@@ -1,4 +1,4 @@
-# JotTick
+### JotTick
 This is the Jotty integration with Home Assistant. If you are looking for Notes, lists and task lists built into Home Assistant without a third party API check out my other project [JotTick](https://jottick.com).
 
 # Jotty Notes & Lists for Home Assistant
