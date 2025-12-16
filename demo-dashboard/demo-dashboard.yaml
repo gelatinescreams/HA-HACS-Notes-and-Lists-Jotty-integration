@@ -7,44 +7,39 @@ views:
     sections:
       - type: grid
         cards:
-          - type: entities
-            title: New Note
-            entities:
-              - entity: input_text.jotty_note_title
-                name: Title
-              - type: custom:lovelace-multiline-text-input-card
-                buttons: false
-                clear: false
-                paste: false
-                save: false
-                entity: input_text.jotty_note_content
-                autosave: true
-                show_success_messages: false
-            footer:
-              type: buttons
-              entities:
-                - entity: script.jotty_create_note
-                  name: Create
-                  icon: mdi:plus-circle
-                  tap_action:
-                    action: call-service
-                    service: script.jotty_create_note
+          - type: custom:html-template-card
+            ignore_line_breaks: true
+            content: |
+              <style>
+                .create-note-form { padding: 16px; }
+                .create-note-form h3 { margin: 0 0 12px 0; color: var(--primary-text-color); }
+                .create-note-form input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 1em; box-sizing: border-box; }
+                .create-note-form textarea { width: 100%; min-height: 120px; padding: 10px; border: 1px solid var(--divider-color); border-radius: 6px; resize: vertical; font-family: inherit; background: var(--card-background-color); color: var(--primary-text-color); font-size: 1em; box-sizing: border-box; }
+                .create-note-form button { padding: 10px 20px; background: var(--primary-color); color: var(--text-primary-color, white); border: none; border-radius: 6px; cursor: pointer; font-size: 1em; margin-top: 10px; }
+                .create-note-form button:hover { opacity: 0.9; }
+                .create-note-form .btn-row { display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+                .create-status { font-size: 0.85em; color: var(--primary-color); margin-top: 8px; min-height: 20px; }
+                .format-toggle { display: flex; gap: 0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; border: 1px solid var(--divider-color); width: fit-content; }
+                .format-toggle button { padding: 6px 14px; background: var(--card-background-color); color: var(--primary-text-color); border: none; cursor: pointer; font-size: 0.85em; transition: all 0.2s; }
+                .format-toggle button.active { background: var(--primary-color); color: white; }
+                .format-toggle button:hover:not(.active) { background: var(--divider-color); }
+              </style>
+              <div class="create-note-form">
+                <h3>New Note</h3>
+                <input type="text" class="new-note-title" placeholder="Title">
+                <div class="format-toggle">
+                  <button type="button" class="format-btn active" data-format="html" onclick="this.parentElement.querySelectorAll('.format-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');this.closest('.create-note-form').querySelector('.new-note-content').placeholder='Content (HTML)';">HTML</button>
+                  <button type="button" class="format-btn" data-format="md" onclick="this.parentElement.querySelectorAll('.format-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');this.closest('.create-note-form').querySelector('.new-note-content').placeholder='Content (Markdown)';">Markdown</button>
+                </div>
+                <textarea class="new-note-content" placeholder="Content (HTML)"></textarea>
+                <div class="btn-row">
+                  <button type="button" class="create-btn" onclick="(function(btn){var form=btn.closest('.create-note-form');var titleEl=form.querySelector('.new-note-title');var contentEl=form.querySelector('.new-note-content');var title=titleEl.value;var content=contentEl.value;var status=form.querySelector('.create-status');var formatBtn=form.querySelector('.format-btn.active');var isMd=formatBtn&amp;&amp;formatBtn.dataset.format==='md';if(!title.trim()){alert('Title is required');return;}if(isMd){content=String.fromCharCode(60)+'!--MD--'+String.fromCharCode(62)+content;}btn.disabled=true;btn.textContent='Creating...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('jotty','create_note',{title:title,content:content});}status.textContent='Note created!';setTimeout(function(){btn.disabled=false;btn.textContent='Create';titleEl.value='';contentEl.value='';form.querySelector('.format-btn[data-format=html]').click();status.textContent='';},1500);})(this);">Create</button>
+                </div>
+                <div class="create-status"></div>
+              </div>
             grid_options:
               columns: full
               rows: auto
-          - type: entities
-            title: Edit Note
-            entities:
-              - entity: input_select.jotty_note_picker
-                name: Pick a note
-              - type: divider
-              - entity: input_text.jotty_edit_note_title
-                name: Title
-              - type: custom:lovelace-multiline-text-input-card
-                entity: input_text.jotty_edit_note_content
-                autosave: true
-                show_success_messages: false
-                buttons: false
             footer:
               type: buttons
               entities:
@@ -100,6 +95,7 @@ views:
                   padding-bottom: 8px;
                   border-bottom: 2px solid var(--primary-color);
                 }
+                .format-badge { display: inline-block; padding: 1px 6px; background: var(--secondary-background-color); color: var(--secondary-text-color); border-radius: 8px; font-size: 0.5em; margin-left: 6px; vertical-align: middle; text-transform: uppercase; }
                 .note-content {
                   color: var(--primary-text-color);
                   margin-bottom: 12px;
@@ -113,19 +109,41 @@ views:
                   font-style: italic;
                   text-align: right;
                 }
-                .note-send-section {
+                .note-send-section, .note-edit-section {
                   margin-top: 12px;
                   padding: 12px;
-                  background: linear-gradient(135deg, rgba(33,150,243,0.1), rgba(3,169,244,0.1));
-                  border: 1px solid rgba(33,150,243,0.3);
+                  background: var(--secondary-background-color);
+                  border: 1px solid var(--divider-color);
                   border-radius: 8px;
                   display: none;
                 }
-                .note-send-section.show { display: block; }
-                .note-send-section h4 { margin: 0 0 12px 0; color: #32373b; }
+                .note-send-section.show, .note-edit-section.show { display: block; }
+                .note-send-section h4, .note-edit-section h4 { margin: 0 0 12px 0; color: var(--primary-text-color); }
                 .send-targets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
                 .send-targets label { display: flex; align-items: center; gap: 4px; font-size: 0.9em; cursor: pointer; }
                 .send-btn { padding: 8px 16px; background: #32373b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+                .send-mode-tabs { display: flex; gap: 0; margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1px solid var(--divider-color); }
+                .send-mode-tab { flex: 1; padding: 8px 12px; background: var(--card-background-color); color: var(--primary-text-color); border: none; cursor: pointer; font-size: 0.9em; transition: all 0.2s; }
+                .send-mode-tab.active { background: var(--primary-color); color: white; }
+                .schedule-picker { display: none; margin: 12px 0; padding: 12px; background: var(--card-background-color); border-radius: 6px; }
+                .schedule-picker.show { display: block; }
+                .schedule-picker label { display: block; font-size: 0.85em; color: var(--secondary-text-color); margin-bottom: 4px; }
+                .schedule-picker input[type="datetime-local"] { width: 100%; padding: 10px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 1em; box-sizing: border-box; }
+                .send-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+                .note-edit-section input[type="text"] { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); box-sizing: border-box; }
+                .note-edit-section textarea { width: 100%; min-height: 120px; padding: 8px; border: 1px solid var(--divider-color); border-radius: 4px; resize: vertical; font-family: inherit; background: var(--card-background-color); color: var(--primary-text-color); box-sizing: border-box; }
+                .note-edit-section .edit-actions { display: flex; gap: 8px; margin-top: 8px; }
+                .note-edit-section .edit-save-btn { padding: 8px 16px; background: var(--success-color, #4caf50); color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .note-edit-section .edit-cancel-btn { padding: 8px 16px; background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); border-radius: 4px; cursor: pointer; }
+                .format-toggle { display: flex; gap: 0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; border: 1px solid var(--divider-color); width: fit-content; }
+                .format-toggle button { padding: 6px 14px; background: var(--card-background-color); color: var(--primary-text-color); border: none; cursor: pointer; font-size: 0.85em; transition: all 0.2s; }
+                .format-toggle button.active { background: var(--primary-color); color: white; }
+                .pending-schedules { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--divider-color); }
+                .pending-schedules h5 { margin: 0 0 8px 0; font-size: 0.9em; color: var(--secondary-text-color); }
+                .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--card-background-color); border-radius: 6px; margin-bottom: 6px; font-size: 0.85em; }
+                .pending-cancel-btn { padding: 4px 10px; background: var(--error-color, #dc2626); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
+                .send-btn-wrapper { position: relative; display: inline-block; }
+                .schedule-badge { position: absolute; top: -8px; right: -8px; background: #ff5555; color: white; font-size: 0.7em; font-weight: bold; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
               </style>
               <div id="jotty-loading">⏳ Processing...</div>
               <script>
@@ -143,7 +161,8 @@ views:
               </script>
               <div class="notes-container">
                 {% set ns = namespace(count=0, notes=[]) %}
-                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or [] %}
+                {% set all_schedules = state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Note:') and state.state != 'unavailable' %}
                     {% set ns.notes = ns.notes + [state] %}
@@ -153,26 +172,76 @@ views:
                   {% set ns.count = ns.count + 1 %}
                   {% if ns.count is odd %}
                     {% set note_id = state_attr(state.entity_id, 'note_id') %}
+                    {% set raw_content = state_attr(state.entity_id, 'content') | default('') %}
+                    {% set is_markdown = raw_content.startswith('<!--MD-->') %}
+                    {% set edit_content = raw_content.replace('<!--MD-->', '') if is_markdown else raw_content %}
+                    {% set display_content = edit_content %}
+                    {% set note_schedules = namespace(count=0, items=[]) %}
+                    {% for sched_id, sched in all_schedules.items() if all_schedules is mapping %}
+                      {% if sched.note_id == note_id %}
+                        {% set note_schedules.items = note_schedules.items + [{'id': sched_id, 'time': sched.scheduled_time, 'targets': sched.targets}] %}
+                        {% set note_schedules.count = note_schedules.count + 1 %}
+                      {% endif %}
+                    {% endfor %}
                     <div class="note-card">
                       <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
-                        <div class="note-title" style="flex-grow:1; margin-bottom:0; padding-bottom:8px; border-bottom:none;">{{ state.state }}</div>
+                        <div class="note-title" style="flex-grow:1; margin-bottom:0; padding-bottom:8px; border-bottom:none;">{{ state.state }}{% if is_markdown %}<span class="format-badge">MD</span>{% endif %}</div>
                         <div style="display:flex;gap:4px;">
-                          <button style="padding:4px 12px; background:#32373b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-send-section');if(panel){panel.classList.toggle('show');}})(this);" title="Send to device">📤</button>
-                          <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete {{ state.state }}?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&&el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
+                          <button style="padding:4px 12px; background:var(--primary-color); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-edit-section');var other=btn.closest('.note-card').querySelector('.note-send-section');if(other)other.classList.remove('show');if(panel){panel.classList.toggle('show');}})(this);" title="Edit">Edit</button>
+                          <div class="send-btn-wrapper">
+                            <button style="padding:4px 12px; background:#32373b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-send-section');var other=btn.closest('.note-card').querySelector('.note-edit-section');if(other)other.classList.remove('show');if(panel){panel.classList.toggle('show');}})(this);" title="Send">Send</button>
+                            {% if note_schedules.count > 0 %}<span class="schedule-badge">{{ note_schedules.count }}</span>{% endif %}
+                          </div>
+                          <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete this note?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&amp;&amp;el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
                         </div>
                       </div>
-                      <div class="note-content">{{ state_attr(state.entity_id, 'content') }}</div>
+                      <div class="note-content">{{ display_content }}</div>
                       <div class="note-timestamp">
                         Updated {{ relative_time(strptime(state_attr(state.entity_id, 'updated'), '%Y-%m-%dT%H:%M:%S.%fZ')) }} ago
                       </div>
                       <div class="note-send-section">
-                        <h4>Send Note To :</h4>
+                        <h4>Send Note</h4>
                         <div class="send-targets">
                           {% for n in notifiers %}{% if n != 'Nobody' %}
                           <label><input type="checkbox" class="send-target-cb" value="{{ n }}"><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
                           {% endif %}{% endfor %}
                         </div>
-                        <button class="send-btn" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(cb=>cb.value);if(!targets.length){alert('Select at least one device');return;}btn.disabled=true;btn.textContent='Sending...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_send_note_to_devices',{targets:targets.join(','),title:'{{ state.state }}',message:'{{ state_attr(state.entity_id, "content") | replace("\n", " ") | truncate(200) }}'});}setTimeout(function(){btn.disabled=false;btn.textContent='Send Note';sec.classList.remove('show');},2000);})(this);">Send Note</button>
+                        <div class="send-mode-tabs">
+                          <button class="send-mode-tab active" onclick="(function(btn){var sec=btn.closest('.note-send-section');sec.querySelectorAll('.send-mode-tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');sec.querySelector('.schedule-picker').classList.remove('show');sec.querySelector('.send-now-btn').style.display='inline-block';sec.querySelector('.schedule-btn').style.display='none';})(this);">Send Now</button>
+                          <button class="send-mode-tab" onclick="(function(btn){var sec=btn.closest('.note-send-section');sec.querySelectorAll('.send-mode-tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');sec.querySelector('.schedule-picker').classList.add('show');sec.querySelector('.send-now-btn').style.display='none';sec.querySelector('.schedule-btn').style.display='inline-block';var picker=sec.querySelector('.schedule-datetime');var now=new Date();now.setMinutes(now.getMinutes()+30);picker.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');})(this);">Schedule</button>
+                        </div>
+                        <div class="schedule-picker">
+                          <label>Send at:</label>
+                          <input type="datetime-local" class="schedule-datetime">
+                        </div>
+                        <div class="send-actions">
+                          <button class="send-btn send-now-btn" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(function(cb){return cb.value;});if(!targets.length){alert('Select at least one device');return;}btn.disabled=true;btn.textContent='Sending...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('script','jotty_send_note_to_devices',{targets:targets.join(','),title:'{{ state.state | e }}',message:'{{ display_content | replace("\n", " ") | truncate(200) | e }}'});}setTimeout(function(){btn.disabled=false;btn.textContent='Send Now';sec.classList.remove('show');},2000);})(this);">Send Now</button>
+                          <button class="send-btn schedule-btn" style="display:none;background:var(--success-color,#4caf50);" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(function(cb){return cb.value;});if(!targets.length){alert('Select at least one device');return;}var dt=sec.querySelector('.schedule-datetime').value;if(!dt){alert('Please select a date and time');return;}var scheduled=new Date(dt);if(scheduled&lt;=new Date()){alert('Please select a future time');return;}btn.disabled=true;btn.textContent='Scheduling...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('script','jotty_schedule_note',{note_id:'{{ note_id }}',title:'{{ state.state | e }}',message:'{{ display_content | replace("\n", " ") | truncate(200) | e }}',targets:targets.join(','),scheduled_time:scheduled.toISOString()});}setTimeout(function(){btn.disabled=false;btn.textContent='Schedule';sec.classList.remove('show');},2000);})(this);">Schedule</button>
+                        </div>
+                        {% if note_schedules.count > 0 %}
+                        <div class="pending-schedules">
+                          <h5>📅 Pending Scheduled Sends</h5>
+                          {% for sched in note_schedules.items %}
+                          <div class="pending-item">
+                            <span>⏰ {{ as_timestamp(sched.time) | timestamp_custom('%b %d at %I:%M %p') }}</span>
+                            <button class="pending-cancel-btn" onclick="if(confirm('Cancel?')){this.disabled=true;var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('script','jotty_cancel_scheduled_note',{schedule_id:'{{ sched.id }}'});}}">Cancel</button>
+                          </div>
+                          {% endfor %}
+                        </div>
+                        {% endif %}
+                      </div>
+                      <div class="note-edit-section">
+                        <h4>Edit Note</h4>
+                        <input type="text" class="edit-title" value="{{ state.state | e }}" placeholder="Title">
+                        <div class="format-toggle">
+                          <button class="format-btn {{ '' if is_markdown else 'active' }}" data-format="html" onclick="this.parentElement.querySelectorAll('.format-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');">HTML</button>
+                          <button class="format-btn {{ 'active' if is_markdown else '' }}" data-format="md" onclick="this.parentElement.querySelectorAll('.format-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');">Markdown</button>
+                        </div>
+                        <textarea class="edit-content" placeholder="Content (no character limit)">{{ edit_content | e }}</textarea>
+                        <div class="edit-actions">
+                          <button class="edit-save-btn" onclick="(function(btn){var sec=btn.closest('.note-edit-section');var t=sec.querySelector('.edit-title').value;var c=sec.querySelector('.edit-content').value;var formatBtn=sec.querySelector('.format-btn.active');var isMd=formatBtn&amp;&amp;formatBtn.dataset.format==='md';if(!t.trim()){alert('Title is required');return;}if(isMd){c=String.fromCharCode(60)+'!--MD--'+String.fromCharCode(62)+c;}btn.disabled=true;btn.textContent='Saving...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('jotty','update_note',{note_id:'{{ note_id }}',title:t,content:c});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="edit-cancel-btn" onclick="this.closest('.note-edit-section').classList.remove('show');">Cancel</button>
+                        </div>
                       </div>
                     </div>
                   {% endif %}
@@ -203,6 +272,7 @@ views:
                   padding-bottom: 8px;
                   border-bottom: 2px solid var(--primary-color);
                 }
+                .format-badge { display: inline-block; padding: 1px 6px; background: var(--secondary-background-color); color: var(--secondary-text-color); border-radius: 8px; font-size: 0.5em; margin-left: 6px; vertical-align: middle; text-transform: uppercase; }
                 .note-content {
                   color: var(--primary-text-color);
                   margin-bottom: 12px;
@@ -216,23 +286,46 @@ views:
                   font-style: italic;
                   text-align: right;
                 }
-                .note-send-section {
+                .note-send-section, .note-edit-section {
                   margin-top: 12px;
                   padding: 12px;
-                  background: linear-gradient(135deg, rgba(33,150,243,0.1), rgba(3,169,244,0.1));
-                  border: 1px solid rgba(33,150,243,0.3);
+                  background: var(--secondary-background-color);
+                  border: 1px solid var(--divider-color);
                   border-radius: 8px;
                   display: none;
                 }
-                .note-send-section.show { display: block; }
-                .note-send-section h4 { margin: 0 0 12px 0; color: #32373b; }
+                .note-send-section.show, .note-edit-section.show { display: block; }
+                .note-send-section h4, .note-edit-section h4 { margin: 0 0 12px 0; color: var(--primary-text-color); }
                 .send-targets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
                 .send-targets label { display: flex; align-items: center; gap: 4px; font-size: 0.9em; cursor: pointer; }
                 .send-btn { padding: 8px 16px; background: #32373b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+                .send-mode-tabs { display: flex; gap: 0; margin-bottom: 12px; border-radius: 6px; overflow: hidden; border: 1px solid var(--divider-color); }
+                .send-mode-tab { flex: 1; padding: 8px 12px; background: var(--card-background-color); color: var(--primary-text-color); border: none; cursor: pointer; font-size: 0.9em; transition: all 0.2s; }
+                .send-mode-tab.active { background: var(--primary-color); color: white; }
+                .schedule-picker { display: none; margin: 12px 0; padding: 12px; background: var(--card-background-color); border-radius: 6px; }
+                .schedule-picker.show { display: block; }
+                .schedule-picker label { display: block; font-size: 0.85em; color: var(--secondary-text-color); margin-bottom: 4px; }
+                .schedule-picker input[type="datetime-local"] { width: 100%; padding: 10px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-size: 1em; box-sizing: border-box; }
+                .send-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+                .note-edit-section input[type="text"] { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); box-sizing: border-box; }
+                .note-edit-section textarea { width: 100%; min-height: 120px; padding: 8px; border: 1px solid var(--divider-color); border-radius: 4px; resize: vertical; font-family: inherit; background: var(--card-background-color); color: var(--primary-text-color); box-sizing: border-box; }
+                .note-edit-section .edit-actions { display: flex; gap: 8px; margin-top: 8px; }
+                .note-edit-section .edit-save-btn { padding: 8px 16px; background: var(--success-color, #4caf50); color: white; border: none; border-radius: 4px; cursor: pointer; }
+                .note-edit-section .edit-cancel-btn { padding: 8px 16px; background: var(--card-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); border-radius: 4px; cursor: pointer; }
+                .format-toggle { display: flex; gap: 0; margin-bottom: 10px; border-radius: 6px; overflow: hidden; border: 1px solid var(--divider-color); width: fit-content; }
+                .format-toggle button { padding: 6px 14px; background: var(--card-background-color); color: var(--primary-text-color); border: none; cursor: pointer; font-size: 0.85em; transition: all 0.2s; }
+                .format-toggle button.active { background: var(--primary-color); color: white; }
+                .pending-schedules { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--divider-color); }
+                .pending-schedules h5 { margin: 0 0 8px 0; font-size: 0.9em; color: var(--secondary-text-color); }
+                .pending-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: var(--card-background-color); border-radius: 6px; margin-bottom: 6px; font-size: 0.85em; }
+                .pending-cancel-btn { padding: 4px 10px; background: var(--error-color, #dc2626); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8em; }
+                .send-btn-wrapper { position: relative; display: inline-block; }
+                .schedule-badge { position: absolute; top: -8px; right: -8px; background: #ff5555; color: white; font-size: 0.7em; font-weight: bold; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
               </style>
               <div class="notes-container">
                 {% set ns = namespace(count=0, notes=[]) %}
-                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or ['Nobody'] %}
+                {% set notifiers = state_attr('sensor.jotty_available_notifiers', 'notifiers') or [] %}
+                {% set all_schedules = state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} %}
                 {% for state in states.sensor %}
                   {% if state.name.startswith('Jotty Note:') and state.state != 'unavailable' %}
                     {% set ns.notes = ns.notes + [state] %}
@@ -242,26 +335,76 @@ views:
                   {% set ns.count = ns.count + 1 %}
                   {% if ns.count is even %}
                     {% set note_id = state_attr(state.entity_id, 'note_id') %}
+                    {% set raw_content = state_attr(state.entity_id, 'content') | default('') %}
+                    {% set is_markdown = raw_content.startswith('<!--MD-->') %}
+                    {% set edit_content = raw_content.replace('<!--MD-->', '') if is_markdown else raw_content %}
+                    {% set display_content = edit_content %}
+                    {% set note_schedules = namespace(count=0, items=[]) %}
+                    {% for sched_id, sched in all_schedules.items() if all_schedules is mapping %}
+                      {% if sched.note_id == note_id %}
+                        {% set note_schedules.items = note_schedules.items + [{'id': sched_id, 'time': sched.scheduled_time, 'targets': sched.targets}] %}
+                        {% set note_schedules.count = note_schedules.count + 1 %}
+                      {% endif %}
+                    {% endfor %}
                     <div class="note-card">
                       <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
-                        <div class="note-title" style="flex-grow:1; margin-bottom:0; padding-bottom:8px; border-bottom:none;">{{ state.state }}</div>
+                        <div class="note-title" style="flex-grow:1; margin-bottom:0; padding-bottom:8px; border-bottom:none;">{{ state.state }}{% if is_markdown %}<span class="format-badge">MD</span>{% endif %}</div>
                         <div style="display:flex;gap:4px;">
-                          <button style="padding:4px 12px; background:#32373b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-send-section');if(panel){panel.classList.toggle('show');}})(this);" title="Send to device">📤</button>
-                          <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete {{ state.state }}?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&&el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
+                          <button style="padding:4px 12px; background:var(--primary-color); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-edit-section');var other=btn.closest('.note-card').querySelector('.note-send-section');if(other)other.classList.remove('show');if(panel){panel.classList.toggle('show');}})(this);" title="Edit">Edit</button>
+                          <div class="send-btn-wrapper">
+                            <button style="padding:4px 12px; background:#32373b; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="(function(btn){var panel=btn.closest('.note-card').querySelector('.note-send-section');var other=btn.closest('.note-card').querySelector('.note-edit-section');if(other)other.classList.remove('show');if(panel){panel.classList.toggle('show');}})(this);" title="Send">Send</button>
+                            {% if note_schedules.count > 0 %}<span class="schedule-badge">{{ note_schedules.count }}</span>{% endif %}
+                          </div>
+                          <button style="padding:4px 12px; background:var(--error-color,#ff5555); color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;" onclick="if(confirm('Delete this note?')){this.disabled=true; const el=document.querySelector('home-assistant'); if(el&amp;&amp;el.hass){el.hass.callService('jotty','delete_note',{note_id:'{{ note_id }}'});}}">🗑️</button>
                         </div>
                       </div>
-                      <div class="note-content">{{ state_attr(state.entity_id, 'content') }}</div>
+                      <div class="note-content">{{ display_content }}</div>
                       <div class="note-timestamp">
                         Updated {{ relative_time(strptime(state_attr(state.entity_id, 'updated'), '%Y-%m-%dT%H:%M:%S.%fZ')) }} ago
                       </div>
                       <div class="note-send-section">
-                        <h4>Send Note To :</h4>
+                        <h4>Send Note</h4>
                         <div class="send-targets">
                           {% for n in notifiers %}{% if n != 'Nobody' %}
                           <label><input type="checkbox" class="send-target-cb" value="{{ n }}"><span>{{ n.replace('notify.mobile_app_','') }}</span></label>
                           {% endif %}{% endfor %}
                         </div>
-                        <button class="send-btn" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(cb=>cb.value);if(!targets.length){alert('Select at least one device');return;}btn.disabled=true;btn.textContent='Sending...';const el=document.querySelector('home-assistant');if(el&&el.hass){el.hass.callService('script','jotty_send_note_to_devices',{targets:targets.join(','),title:'{{ state.state }}',message:'{{ state_attr(state.entity_id, "content") | replace("\n", " ") | truncate(200) }}'});}setTimeout(function(){btn.disabled=false;btn.textContent='Send Note';sec.classList.remove('show');},2000);})(this);">Send Note</button>
+                        <div class="send-mode-tabs">
+                          <button class="send-mode-tab active" onclick="(function(btn){var sec=btn.closest('.note-send-section');sec.querySelectorAll('.send-mode-tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');sec.querySelector('.schedule-picker').classList.remove('show');sec.querySelector('.send-now-btn').style.display='inline-block';sec.querySelector('.schedule-btn').style.display='none';})(this);">Send Now</button>
+                          <button class="send-mode-tab" onclick="(function(btn){var sec=btn.closest('.note-send-section');sec.querySelectorAll('.send-mode-tab').forEach(function(t){t.classList.remove('active');});btn.classList.add('active');sec.querySelector('.schedule-picker').classList.add('show');sec.querySelector('.send-now-btn').style.display='none';sec.querySelector('.schedule-btn').style.display='inline-block';var picker=sec.querySelector('.schedule-datetime');var now=new Date();now.setMinutes(now.getMinutes()+30);picker.value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0')+'T'+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');})(this);">Schedule</button>
+                        </div>
+                        <div class="schedule-picker">
+                          <label>Send at:</label>
+                          <input type="datetime-local" class="schedule-datetime">
+                        </div>
+                        <div class="send-actions">
+                          <button class="send-btn send-now-btn" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(function(cb){return cb.value;});if(!targets.length){alert('Select at least one device');return;}btn.disabled=true;btn.textContent='Sending...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('script','jotty_send_note_to_devices',{targets:targets.join(','),title:'{{ state.state | e }}',message:'{{ display_content | replace("\n", " ") | truncate(200) | e }}'});}setTimeout(function(){btn.disabled=false;btn.textContent='Send Now';sec.classList.remove('show');},2000);})(this);">Send Now</button>
+                          <button class="send-btn schedule-btn" style="display:none;background:var(--success-color,#4caf50);" onclick="(function(btn){var sec=btn.closest('.note-send-section');var targets=Array.from(sec.querySelectorAll('.send-target-cb:checked')).map(function(cb){return cb.value;});if(!targets.length){alert('Select at least one device');return;}var dt=sec.querySelector('.schedule-datetime').value;if(!dt){alert('Please select a date and time');return;}var scheduled=new Date(dt);if(scheduled&lt;=new Date()){alert('Please select a future time');return;}btn.disabled=true;btn.textContent='Scheduling...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('script','jotty_schedule_note',{note_id:'{{ note_id }}',title:'{{ state.state | e }}',message:'{{ display_content | replace("\n", " ") | truncate(200) | e }}',targets:targets.join(','),scheduled_time:scheduled.toISOString()});}setTimeout(function(){btn.disabled=false;btn.textContent='Schedule';sec.classList.remove('show');},2000);})(this);">Schedule</button>
+                        </div>
+                        {% if note_schedules.count > 0 %}
+                        <div class="pending-schedules">
+                          <h5>📅 Pending Scheduled Sends</h5>
+                          {% for sched in note_schedules.items %}
+                          <div class="pending-item">
+                            <span>⏰ {{ as_timestamp(sched.time) | timestamp_custom('%b %d at %I:%M %p') }}</span>
+                            <button class="pending-cancel-btn" onclick="if(confirm('Cancel?')){this.disabled=true;var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('script','jotty_cancel_scheduled_note',{schedule_id:'{{ sched.id }}'});}}">Cancel</button>
+                          </div>
+                          {% endfor %}
+                        </div>
+                        {% endif %}
+                      </div>
+                      <div class="note-edit-section">
+                        <h4>Edit Note</h4>
+                        <input type="text" class="edit-title" value="{{ state.state | e }}" placeholder="Title">
+                        <div class="format-toggle">
+                          <button class="format-btn {{ '' if is_markdown else 'active' }}" data-format="html" onclick="this.parentElement.querySelectorAll('.format-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');">HTML</button>
+                          <button class="format-btn {{ 'active' if is_markdown else '' }}" data-format="md" onclick="this.parentElement.querySelectorAll('.format-btn').forEach(function(b){b.classList.remove('active');});this.classList.add('active');">Markdown</button>
+                        </div>
+                        <textarea class="edit-content" placeholder="Content (no character limit)">{{ edit_content | e }}</textarea>
+                        <div class="edit-actions">
+                          <button class="edit-save-btn" onclick="(function(btn){var sec=btn.closest('.note-edit-section');var t=sec.querySelector('.edit-title').value;var c=sec.querySelector('.edit-content').value;var formatBtn=sec.querySelector('.format-btn.active');var isMd=formatBtn&amp;&amp;formatBtn.dataset.format==='md';if(!t.trim()){alert('Title is required');return;}if(isMd){c=String.fromCharCode(60)+'!--MD--'+String.fromCharCode(62)+c;}btn.disabled=true;btn.textContent='Saving...';var el=document.querySelector('home-assistant');if(el&amp;&amp;el.hass){el.hass.callService('jotty','update_note',{note_id:'{{ note_id }}',title:t,content:c});}setTimeout(function(){btn.disabled=false;btn.textContent='Save';sec.classList.remove('show');},1500);})(this);">Save</button>
+                          <button class="edit-cancel-btn" onclick="this.closest('.note-edit-section').classList.remove('show');">Cancel</button>
+                        </div>
                       </div>
                     </div>
                   {% endif %}

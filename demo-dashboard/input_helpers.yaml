@@ -115,6 +115,7 @@ input_text:
     name: "Loading Item"
     initial: ""
     max: 100
+
   jotty_quick_task_action_data:
     name: Quick Task Action Data
     max: 255
@@ -139,6 +140,7 @@ input_text:
     name: "Task Item Text"
     initial: ""
     max: 255
+
   jotty_new_status_id:
     name: "New Status ID"
     initial: ""
@@ -181,7 +183,7 @@ input_text:
     name: "Parent Item Index"
     initial: ""
     max: 50
-    icon: mdi:file-tree  
+    icon: mdi:file-tree    
 
 #under input_select  
 input_select:
@@ -194,7 +196,6 @@ input_select:
       - "Every day"
     initial: "Every day"
     icon: mdi:calendar-week
-
 
   jotty_reminder_target:
     name: "Remind Who"
@@ -231,6 +232,7 @@ input_select:
       - "-- Select status --"
     initial: "-- Select status --"
     icon: mdi:view-column
+
   jotty_checklist_type:
     name: "Checklist Type"
     options:
@@ -305,6 +307,7 @@ input_number:
     step: 1
     initial: 0
     mode: box
+
   jotty_new_status_order:
     name: "New Status Order"
     initial: 0
@@ -312,7 +315,7 @@ input_number:
     max: 20
     step: 1
     mode: box
-    icon: mdi:sort-numeric-ascending    
+    icon: mdi:sort-numeric-ascending  
 
 #under input_boolean    
 input_boolean:
@@ -395,6 +398,7 @@ template:
               {% set ns.services = ns.services + ['notify.mobile_app_' ~ device] %}
             {% endfor %}
             {{ ns.services }}
+
   - trigger:
       - platform: homeassistant
         event: start
@@ -415,4 +419,26 @@ template:
               {{ trigger.event.data.configs }}
             {% else %}
               {{ this.attributes.configs | default({}) }}
-            {% endif %}      
+            {% endif %}
+
+  - trigger:
+      - platform: homeassistant
+        event: start
+      - platform: event
+        event_type: jotty_scheduled_notes_update
+    sensor:
+      - name: "Jotty Scheduled Notes"
+        unique_id: jotty_scheduled_notes_storage
+        state: >
+          {% if trigger.platform == 'event' and trigger.event.data.schedules is defined %}
+            {{ trigger.event.data.schedules | length }}
+          {% else %}
+            {{ this.attributes.schedules | default({}) | length }}
+          {% endif %}
+        attributes:
+          schedules: >
+            {% if trigger.platform == 'event' and trigger.event.data.schedules is defined %}
+              {{ trigger.event.data.schedules }}
+            {% else %}
+              {{ this.attributes.schedules | default({}) }}
+            {% endif %}

@@ -36,6 +36,7 @@ jotty_create_note:
     data:
       title: Note Created
       message: Your note has been created!
+
 jotty_update_note:
   alias: 'Jotty: Update Note'
   icon: mdi:content-save
@@ -58,6 +59,7 @@ jotty_update_note:
     data:
       title: Note Updated
       message: Your note has been updated!
+
 jotty_delete_note:
   alias: 'Jotty: Delete Note'
   icon: mdi:delete
@@ -86,6 +88,7 @@ jotty_delete_note:
     data:
       title: Note Deleted
       message: Your note has been deleted!
+
 jotty_create_checklist:
   alias: 'Jotty: Create Checklist'
   icon: mdi:playlist-plus
@@ -112,6 +115,7 @@ jotty_create_checklist:
     data:
       title: Checklist Created
       message: Your checklist has been created!
+
 jotty_add_item:
   alias: 'Jotty: Add Item'
   icon: mdi:plus
@@ -140,6 +144,7 @@ jotty_add_item:
     data:
       title: Item Added
       message: Item added to checklist!
+
 jotty_check_item:
   alias: 'Jotty: Check Item'
   icon: mdi:check-circle
@@ -158,6 +163,7 @@ jotty_check_item:
     data:
       title: Item Checked
       message: Item marked as completed!
+
 jotty_uncheck_item:
   alias: 'Jotty: Uncheck Item'
   icon: mdi:checkbox-blank-circle-outline
@@ -176,6 +182,7 @@ jotty_uncheck_item:
     data:
       title: Item Unchecked
       message: Item marked as incomplete!
+
 jotty_delete_checklist:
   alias: 'Jotty: Delete Checklist'
   icon: mdi:delete
@@ -201,6 +208,7 @@ jotty_delete_checklist:
     data:
       title: Checklist Deleted
       message: Your checklist has been deleted!
+
 jotty_force_update_note_picker:
   alias: 'Jotty: Force Update Note Picker'
   icon: mdi:sync
@@ -212,21 +220,33 @@ jotty_force_update_note_picker:
     target:
       entity_id: input_select.jotty_note_picker
     data:
-      options: "{%- set ns = namespace(items=['-- Pick a note --'], titles={}) -%}
+      options: >
+        {%- set ns = namespace(items=['-- Pick a note --'], titles={}) -%}
         {%- set notes = states.sensor | selectattr('name', 'search', '^Jotty Note:')
-        | rejectattr('state', 'eq', 'unavailable') | list -%} {%- for state in notes
-        -%}\n  {%- set title = state.state -%}\n  {%- if title in ns.titles -%}\n
-        \   {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}\n
-        \ {%- else -%}\n    {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}\n
-        \ {%- endif -%}\n{%- endfor -%} {%- set ns2 = namespace(counts={}) -%} {%-
-        for state in notes | sort(attribute='attributes.updated', reverse=true) -%}\n
-        \ {%- set title = state.state -%}\n  {%- set note_id = state_attr(state.entity_id,
-        'note_id') -%}\n  {%- if ns.titles[title] > 1 -%}\n    {%- set current_count
-        = ns2.counts.get(title, 0) + 1 -%}\n    {%- set ns2.counts = dict(ns2.counts,
-        **{title: current_count}) -%}\n    {%- set display_title = title ~ ' (' ~
-        note_id[-6:] ~ ')' -%}\n  {%- else -%}\n    {%- set display_title = title
-        -%}\n  {%- endif -%}\n  {%- set ns.items = ns.items + [display_title] -%}\n{%-
-        endfor -%} {{ ns.items }}"
+        | rejectattr('state', 'eq', 'unavailable') | list -%}
+        {%- for state in notes -%}
+          {%- set title = state.state -%}
+          {%- if title in ns.titles -%}
+            {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}
+          {%- else -%}
+            {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set ns2 = namespace(counts={}) -%}
+        {%- for state in notes | sort(attribute='attributes.updated', reverse=true) -%}
+          {%- set title = state.state -%}
+          {%- set note_id = state_attr(state.entity_id, 'note_id') -%}
+          {%- if ns.titles[title] > 1 -%}
+            {%- set current_count = ns2.counts.get(title, 0) + 1 -%}
+            {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}
+            {%- set display_title = title ~ ' (' ~ note_id[-6:] ~ ')' -%}
+          {%- else -%}
+            {%- set display_title = title -%}
+          {%- endif -%}
+          {%- set ns.items = ns.items + [display_title] -%}
+        {%- endfor -%}
+        {{ ns.items }}
+
 jotty_force_update_checklist_picker:
   alias: 'Jotty: Force Update Checklist Picker'
   icon: mdi:sync
@@ -238,868 +258,145 @@ jotty_force_update_checklist_picker:
     target:
       entity_id: input_select.jotty_checklist_picker
     data:
-      options: "{%- set ns = namespace(items=['-- Pick a checklist --'], titles={})
-        -%} {%- set lists = states.sensor | selectattr('name', 'search', '^Jotty List:')
-        | rejectattr('state', 'eq', 'unavailable') | list -%} {%- for state in lists
-        -%}\n  {%- set title = state_attr(state.entity_id, 'title') -%}\n  {%- if
-        title -%}\n    {%- if title in ns.titles -%}\n      {%- set ns.titles = dict(ns.titles,
-        **{title: ns.titles[title] + 1}) -%}\n    {%- else -%}\n      {%- set ns.titles
-        = dict(ns.titles, **{title: 1}) -%}\n    {%- endif -%}\n  {%- endif -%}\n{%-
-        endfor -%} {%- set ns2 = namespace(counts={}) -%} {%- for state in lists |
-        sort(attribute='attributes.updated', reverse=true) -%}\n  {%- set title =
-        state_attr(state.entity_id, 'title') -%}\n  {%- if title -%}\n    {%- set
-        list_id = state_attr(state.entity_id, 'checklist_id') -%}\n    {%- if ns.titles[title]
-        > 1 -%}\n      {%- set current_count = ns2.counts.get(title, 0) + 1 -%}\n
-        \     {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}\n
-        \     {%- set display_title = title ~ ' (' ~ list_id[-6:] ~ ')' -%}\n    {%-
-        else -%}\n      {%- set display_title = title -%}\n    {%- endif -%}\n    {%-
-        set ns.items = ns.items + [display_title] -%}\n  {%- endif -%}\n{%- endfor
-        -%} {{ ns.items }}"
+      options: >
+        {%- set ns = namespace(items=['-- Pick a checklist --'], titles={}) -%}
+        {%- set lists = states.sensor | selectattr('name', 'search', '^Jotty List:')
+        | rejectattr('state', 'eq', 'unavailable') | list -%}
+        {%- for state in lists -%}
+          {%- set title = state_attr(state.entity_id, 'title') -%}
+          {%- if title -%}
+            {%- if title in ns.titles -%}
+              {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}
+            {%- else -%}
+              {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set ns2 = namespace(counts={}) -%}
+        {%- for state in lists | sort(attribute='attributes.updated', reverse=true) -%}
+          {%- set title = state_attr(state.entity_id, 'title') -%}
+          {%- if title -%}
+            {%- set list_id = state_attr(state.entity_id, 'checklist_id') -%}
+            {%- if ns.titles[title] > 1 -%}
+              {%- set current_count = ns2.counts.get(title, 0) + 1 -%}
+              {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}
+              {%- set display_title = title ~ ' (' ~ list_id[-6:] ~ ')' -%}
+            {%- else -%}
+              {%- set display_title = title -%}
+            {%- endif -%}
+            {%- set ns.items = ns.items + [display_title] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {{ ns.items }}
+
+jotty_force_update_task_picker:
+  alias: 'Jotty: Force Update Task Picker'
+  icon: mdi:sync
+  sequence:
+  - service: homeassistant.update_entity
+    target:
+      entity_id: sensor.jotty_total_tasks
+  - service: input_select.set_options
+    target:
+      entity_id: input_select.jotty_task_picker
+    data:
+      options: >
+        {%- set ns = namespace(items=['-- Pick a task list --'], titles={}) -%}
+        {%- set tasks = states.sensor | selectattr('name', 'search', '^Jotty Task:')
+        | rejectattr('state', 'eq', 'unavailable') | list -%}
+        {%- for state in tasks -%}
+          {%- set title = state_attr(state.entity_id, 'title') -%}
+          {%- if title -%}
+            {%- if title in ns.titles -%}
+              {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}
+            {%- else -%}
+              {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}
+            {%- endif -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set ns2 = namespace(counts={}) -%}
+        {%- for state in tasks | sort(attribute='attributes.updated', reverse=true) -%}
+          {%- set title = state_attr(state.entity_id, 'title') -%}
+          {%- if title -%}
+            {%- set task_id = state_attr(state.entity_id, 'task_id') -%}
+            {%- if ns.titles[title] > 1 -%}
+              {%- set current_count = ns2.counts.get(title, 0) + 1 -%}
+              {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}
+              {%- set display_title = title ~ ' (' ~ task_id[-6:] ~ ')' -%}
+            {%- else -%}
+              {%- set display_title = title -%}
+            {%- endif -%}
+            {%- set ns.items = ns.items + [display_title] -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {{ ns.items }}
+
 jotty_update_both_dropdowns:
-  alias: "Jotty: Update All Dropdowns"
+  alias: "Jotty: Update Both Dropdowns"
   icon: mdi:sync-circle
   sequence:
     - service: script.jotty_force_update_note_picker
     - service: script.jotty_force_update_checklist_picker
     - service: script.jotty_force_update_task_picker
-jotty_save_edited_note:
-  alias: 'Jotty: Save Edited Note'
-  icon: mdi:content-save
-  sequence:
-  - service: input_boolean.turn_on
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: jotty.update_note
-    data:
-      note_id: '{{ states(''input_text.jotty_note_id'') }}'
-      title: '{{ states(''input_text.jotty_edit_note_title'') }}'
-      content: '{{ states(''input_text.jotty_edit_note_content'') }}'
-  - service: homeassistant.update_entity
-    target:
-      entity_id: sensor.jotty_total_notes
-  - service: input_boolean.turn_off
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: persistent_notification.create
-    data:
-      title: Note Saved
-      message: Your changes have been saved!
-jotty_delete_edited_note:
-  alias: 'Jotty: Delete Edited Note'
-  icon: mdi:delete
-  sequence:
-  - service: input_boolean.turn_on
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: jotty.delete_note
-    data:
-      note_id: '{{ states(''input_text.jotty_note_id'') }}'
-  - service: homeassistant.update_entity
-    target:
-      entity_id: sensor.jotty_total_notes
-  - service: input_text.set_value
-    target:
-      entity_id:
-      - input_text.jotty_note_id
-      - input_text.jotty_edit_note_title
-      - input_text.jotty_edit_note_content
-    data:
-      value: ''
-  - service: input_select.select_option
-    target:
-      entity_id: input_select.jotty_note_picker
-    data:
-      option: -- Pick a note --
-  - service: input_boolean.turn_off
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: persistent_notification.create
-    data:
-      title: Note Deleted
-      message: Note has been deleted!
-jotty_toggle_item_completion:
-  alias: 'Jotty: Toggle Item Completion'
-  icon: mdi:checkbox-marked-circle-outline
-  sequence:
-  - variables:
-      checklist_id: '{{ states(''input_text.jotty_selected_checklist_id'') }}'
-      item_index: '{{ states(''input_number.jotty_selected_item_index'') | int }}'
-      is_completed: '{{ states(''input_boolean.jotty_item_completed'') == ''on'' }}'
-  - condition: template
-    value_template: '{{ checklist_id != '''' and item_index >= 0 }}'
-  - choose:
-    - conditions:
-      - condition: template
-        value_template: '{{ is_completed }}'
-      sequence:
-      - service: jotty.check_item
-        data:
-          checklist_id: '{{ checklist_id }}'
-          item_index: '{{ item_index }}'
-    default:
-    - service: jotty.uncheck_item
-      data:
-        checklist_id: '{{ checklist_id }}'
-        item_index: '{{ item_index }}'
-  - service: homeassistant.update_entity
-    target:
-      entity_id:
-      - sensor.jotty_completed_items
-      - sensor.jotty_pending_items
-      - sensor.jotty_completion_rate
-  - service: automation.trigger
-    target:
-      entity_id: automation.jotty_load_checklist_items
-  - service: persistent_notification.create
-    data:
-      title: Item Updated
-      message: Item marked as {{ 'completed' if is_completed else 'incomplete' }}
-jotty_update_task_status:
-  alias: 'Jotty: Update Task Status'
-  icon: mdi:list-status
-  sequence:
-  - variables:
-      checklist_id: '{{ states(''input_text.jotty_selected_checklist_id'') }}'
-      item_index: '{{ states(''input_number.jotty_selected_item_index'') | int }}'
-      new_status: '{{ states(''input_select.jotty_item_status'') }}'
-      list_type: '{{ states(''input_text.jotty_selected_checklist_type'') }}'
-  - condition: template
-    value_template: "{{ checklist_id != '' and \n   item_index >= 0 and \n   list_type
-      == 'task' and\n   new_status not in ['-- Select status --', ''] }}\n"
-  - choose:
-    - conditions:
-      - condition: template
-        value_template: '{{ new_status == ''completed'' }}'
-      sequence:
-      - service: jotty.check_item
-        data:
-          checklist_id: '{{ checklist_id }}'
-          item_index: '{{ item_index }}'
-    - conditions:
-      - condition: template
-        value_template: '{{ new_status in [''todo'', ''in_progress'', ''paused'']
-          }}'
-      sequence:
-      - service: jotty.uncheck_item
-        data:
-          checklist_id: '{{ checklist_id }}'
-          item_index: '{{ item_index }}'
-  - service: homeassistant.update_entity
-    target:
-      entity_id:
-      - sensor.jotty_completed_items
-      - sensor.jotty_pending_items
-  - service: automation.trigger
-    target:
-      entity_id: automation.jotty_load_checklist_items
-  - service: persistent_notification.create
-    data:
-      title: Task Status Updated
-      message: Task status changed to {{ new_status }}
-jotty_add_item_to_selected_list:
-  alias: 'Jotty: Add Item to Selected List'
-  icon: mdi:plus-box
-  sequence:
-  - variables:
-      checklist_id: '{{ states(''input_text.jotty_selected_checklist_id'') }}'
-      list_type: '{{ states(''input_text.jotty_selected_checklist_type'') }}'
-  - condition: template
-    value_template: '{{ checklist_id != '''' and states(''input_text.jotty_item_text'')
-      != '''' }}'
-  - service: input_boolean.turn_on
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - choose:
-    - conditions:
-      - condition: template
-        value_template: '{{ list_type == ''task'' }}'
-      sequence:
-      - service: jotty.add_checklist_item
-        data:
-          checklist_id: '{{ checklist_id }}'
-          text: '{{ states(''input_text.jotty_item_text'') }}'
-          status: '{{ states(''input_select.jotty_task_status'') if states(''input_select.jotty_task_status'')
-            != '''' else ''todo'' }}'
-    default:
-    - service: jotty.add_checklist_item
-      data:
-        checklist_id: '{{ checklist_id }}'
-        text: '{{ states(''input_text.jotty_item_text'') }}'
-  - service: homeassistant.update_entity
-    target:
-      entity_id: sensor.jotty_total_items
-  - service: input_text.set_value
-    target:
-      entity_id: input_text.jotty_item_text
-    data:
-      value: ''
-  - service: automation.trigger
-    target:
-      entity_id: automation.jotty_load_checklist_items
-  - service: input_boolean.turn_off
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: persistent_notification.create
-    data:
-      title: Item Added
-      message: New item added to {{ states('input_text.jotty_selected_checklist_title')
-        }}
-jotty_quick_check_item:
-  alias: 'Jotty: Quick Check Item'
-  icon: mdi:check
-  fields:
-    item_index:
-      description: Index of the item to check
-      example: 0
-  sequence:
-  - variables:
-      checklist_id: '{{ states(''input_text.jotty_selected_checklist_id'') }}'
-  - condition: template
-    value_template: '{{ checklist_id != '''' }}'
-  - service: jotty.check_item
-    data:
-      checklist_id: '{{ checklist_id }}'
-      item_index: '{{ item_index }}'
-  - service: automation.trigger
-    target:
-      entity_id: automation.jotty_load_checklist_items
-jotty_quick_uncheck_item:
-  alias: 'Jotty: Quick Uncheck Item'
-  icon: mdi:checkbox-blank-outline
-  fields:
-    item_index:
-      description: Index of the item to uncheck
-      example: 0
-  sequence:
-  - variables:
-      checklist_id: '{{ states(''input_text.jotty_selected_checklist_id'') }}'
-  - condition: template
-    value_template: '{{ checklist_id != '''' }}'
-  - service: jotty.uncheck_item
-    data:
-      checklist_id: '{{ checklist_id }}'
-      item_index: '{{ item_index }}'
-  - service: automation.trigger
-    target:
-      entity_id: automation.jotty_load_checklist_items
-jotty_refresh_dashboard_data:
-  alias: 'Jotty: Refresh Dashboard Data'
-  icon: mdi:refresh
-  sequence:
-  - service: homeassistant.update_entity
-    target:
-      entity_id:
-      - sensor.jotty_total_notes
-      - sensor.jotty_total_checklists
-      - sensor.jotty_total_items
-      - sensor.jotty_completed_items
-      - sensor.jotty_pending_items
-      - sensor.jotty_completion_rate
-      - sensor.jotty_total_tasks
-  - service: input_select.set_options
-    target:
-      entity_id: input_select.jotty_note_picker
-    data:
-      options: "{%- set ns = namespace(items=['-- Pick a note --'], titles={}) -%}
-        {%- set notes = states.sensor | selectattr('name', 'search', '^Jotty Note:')
-        | rejectattr('state', 'eq', 'unavailable') | list -%} {%- for state in notes
-        -%}\n  {%- set title = state.state -%}\n  {%- if title in ns.titles -%}\n
-        \   {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}\n
-        \ {%- else -%}\n    {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}\n
-        \ {%- endif -%}\n{%- endfor -%} {%- set ns2 = namespace(counts={}) -%} {%-
-        for state in notes | sort(attribute='attributes.updated', reverse=true) -%}\n
-        \ {%- set title = state.state -%}\n  {%- set note_id = state_attr(state.entity_id,
-        'note_id') -%}\n  {%- if ns.titles[title] > 1 -%}\n    {%- set current_count
-        = ns2.counts.get(title, 0) + 1 -%}\n    {%- set ns2.counts = dict(ns2.counts,
-        **{title: current_count}) -%}\n    {%- set display_title = title ~ ' (' ~
-        note_id[-6:] ~ ')' -%}\n  {%- else -%}\n    {%- set display_title = title
-        -%}\n  {%- endif -%}\n  {%- set ns.items = ns.items + [display_title] -%}\n{%-
-        endfor -%} {{ ns.items }}"
-  - service: input_select.set_options
-    target:
-      entity_id: input_select.jotty_checklist_picker
-    data:
-      options: "{%- set ns = namespace(items=['-- Pick a checklist --'], titles={})
-        -%} {%- set lists = states.sensor | selectattr('name', 'search', '^Jotty List:')
-        | rejectattr('state', 'eq', 'unavailable') | list -%} {%- for state in lists
-        -%}\n  {%- set title = state_attr(state.entity_id, 'title') -%}\n  {%- if
-        title -%}\n    {%- if title in ns.titles -%}\n      {%- set ns.titles = dict(ns.titles,
-        **{title: ns.titles[title] + 1}) -%}\n    {%- else -%}\n      {%- set ns.titles
-        = dict(ns.titles, **{title: 1}) -%}\n    {%- endif -%}\n  {%- endif -%}\n{%-
-        endfor -%} {%- set ns2 = namespace(counts={}) -%} {%- for state in lists |
-        sort(attribute='attributes.updated', reverse=true) -%}\n  {%- set title =
-        state_attr(state.entity_id, 'title') -%}\n  {%- if title -%}\n    {%- set
-        list_id = state_attr(state.entity_id, 'checklist_id') -%}\n    {%- if ns.titles[title]
-        > 1 -%}\n      {%- set current_count = ns2.counts.get(title, 0) + 1 -%}\n
-        \     {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}\n
-        \     {%- set display_title = title ~ ' (' ~ list_id[-6:] ~ ')' -%}\n    {%-
-        else -%}\n      {%- set display_title = title -%}\n    {%- endif -%}\n    {%-
-        set ns.items = ns.items + [display_title] -%}\n  {%- endif -%}\n{%- endfor
-        -%} {{ ns.items }}"
-  - service: persistent_notification.create
-    data:
-      title: Jotty Refreshed
-      message: Data and dropdowns updated!
-jotty_delete_note_by_id:
-  alias: 'Jotty: Delete Note by ID (Direct)'
-  icon: mdi:delete
-  fields:
-    note_id:
-      description: The unique ID of the note to delete
-      example: abc123
-  sequence:
-  - service: input_boolean.turn_on
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: jotty.delete_note
-    data:
-      note_id: '{{ note_id }}'
-  - service: homeassistant.update_entity
-    target:
-      entity_id: sensor.jotty_total_notes
-  - service: script.jotty_refresh_dashboard_data
-  - service: input_boolean.turn_off
-    target:
-      entity_id: input_boolean.jotty_is_loading
-  - service: persistent_notification.create
-    data:
-      title: Note Deleted
-      message: Note has been deleted successfully!
-      
-jotty_create_task:
-  alias: "Jotty: Create Task List"
-  icon: mdi:clipboard-plus
-  sequence:
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.create_task
-      data:
-        title: "{{ states('input_text.jotty_task_title') }}"
-    - service: homeassistant.update_entity
-      target:
-        entity_id: sensor.jotty_total_tasks
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_task_title
-      data:
-        value: ""
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: persistent_notification.create
-      data:
-        title: "Task List Created"
-        message: "Your task list has been created!"
-
-jotty_delete_task:
-  alias: "Jotty: Delete Task List"
-  icon: mdi:clipboard-remove
-  sequence:
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.delete_task
-      data:
-        task_id: "{{ states('input_text.jotty_selected_task_id') }}"
-    - service: homeassistant.update_entity
-      target:
-        entity_id: sensor.jotty_total_tasks
-    - service: input_text.set_value
-      target:
-        entity_id:
-          - input_text.jotty_selected_task_id
-          - input_text.jotty_selected_task_title
-      data:
-        value: ""
-    - service: input_select.select_option
-      target:
-        entity_id: input_select.jotty_task_picker
-      data:
-        option: "-- Pick a task list --"
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: persistent_notification.create
-      data:
-        title: "Task List Deleted"
-        message: "Your task list has been deleted!"
-
-jotty_add_task_item:
-  alias: "Jotty: Add Task Item"
-  icon: mdi:clipboard-text-play
-  sequence:
-    - variables:
-        task_id: "{{ states('input_text.jotty_selected_task_id') }}"
-    - condition: template
-      value_template: "{{ task_id != '' and states('input_text.jotty_task_item_text') != '' }}"
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.add_task_item
-      data:
-        task_id: "{{ task_id }}"
-        text: "{{ states('input_text.jotty_task_item_text') }}"
-        status: "{{ states('input_select.jotty_new_task_item_status') }}"
-    - service: homeassistant.update_entity
-      target:
-        entity_id: sensor.jotty_total_tasks
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_task_item_text
-      data:
-        value: ""
-    - service: automation.trigger
-      target:
-        entity_id: automation.jotty_load_task_items
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: persistent_notification.create
-      data:
-        title: "Task Item Added"
-        message: "New task item added!"
-
-jotty_update_task_item_status:
-  alias: "Jotty: Update Task Item Status"
-  icon: mdi:list-status
-  fields:
-    task_id:
-      description: "Task list ID"
-    item_index:
-      description: "Item index"
-    status:
-      description: "New status"
-  sequence:
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.update_task_item_status
-      data:
-        task_id: "{{ task_id }}"
-        item_index: "{{ item_index }}"
-        status: "{{ status }}"
-    - service: homeassistant.update_entity
-      target:
-        entity_id: sensor.jotty_total_tasks
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-
-jotty_delete_task_item:
-  alias: "Jotty: Delete Task Item"
-  icon: mdi:clipboard-minus
-  fields:
-    task_id:
-      description: "Task list ID"
-    item_index:
-      description: "Item index"
-  sequence:
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.delete_task_item
-      data:
-        task_id: "{{ task_id }}"
-        item_index: "{{ item_index }}"
-    - service: homeassistant.update_entity
-      target:
-        entity_id: sensor.jotty_total_tasks
-    - service: automation.trigger
-      target:
-        entity_id: automation.jotty_load_task_items
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: persistent_notification.create
-      data:
-        title: "Task Item Deleted"
-        message: "Task item has been deleted!"
-
-jotty_delete_checklist_item:
-  alias: "Jotty: Delete Checklist Item"
-  icon: mdi:delete
-  fields:
-    checklist_id:
-      description: "Checklist ID"
-    item_index:
-      description: "Item index"
-  sequence:
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.delete_checklist_item
-      data:
-        checklist_id: "{{ checklist_id }}"
-        item_index: "{{ item_index }}"
-    - service: homeassistant.update_entity
-      target:
-        entity_id:
-          - sensor.jotty_total_items
-          - sensor.jotty_completed_items
-    - service: automation.trigger
-      target:
-        entity_id: automation.jotty_load_checklist_items
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: persistent_notification.create
-      data:
-        title: "Item Deleted"
-        message: "Checklist item has been deleted!"
-
-jotty_force_update_task_picker:
-  alias: "Jotty: Force Update Task Picker"
-  icon: mdi:sync
-  sequence:
-    - service: homeassistant.update_entity
-      target:
-        entity_id: sensor.jotty_total_tasks
-    - service: input_select.set_options
-      target:
-        entity_id: input_select.jotty_task_picker
-      data:
-        options: >-
-          {%- set ns = namespace(items=['-- Pick a task list --'], titles={}) -%}
-          {%- set tasks = states.sensor | selectattr('name', 'search', '^Jotty Task:') | rejectattr('state', 'eq', 'unavailable') | list -%}
-          {%- for state in tasks -%}
-            {%- set title = state_attr(state.entity_id, 'title') -%}
-            {%- if title -%}
-              {%- if title in ns.titles -%}
-                {%- set ns.titles = dict(ns.titles, **{title: ns.titles[title] + 1}) -%}
-              {%- else -%}
-                {%- set ns.titles = dict(ns.titles, **{title: 1}) -%}
-              {%- endif -%}
-            {%- endif -%}
-          {%- endfor -%}
-          {%- set ns2 = namespace(counts={}) -%}
-          {%- for state in tasks | sort(attribute='attributes.updated', reverse=true) -%}
-            {%- set title = state_attr(state.entity_id, 'title') -%}
-            {%- if title -%}
-              {%- set task_id = state_attr(state.entity_id, 'task_id') -%}
-              {%- if ns.titles[title] > 1 -%}
-                {%- set current_count = ns2.counts.get(title, 0) + 1 -%}
-                {%- set ns2.counts = dict(ns2.counts, **{title: current_count}) -%}
-                {%- set display_title = title ~ ' (' ~ task_id[-6:] ~ ')' -%}
-              {%- else -%}
-                {%- set display_title = title -%}
-              {%- endif -%}
-              {%- set ns.items = ns.items + [display_title] -%}
-            {%- endif -%}
-          {%- endfor -%}
-          {{ ns.items }}
-jotty_load_task_statuses:
-  alias: "Jotty: Load Task Statuses"
-  sequence:
-    - variables:
-        task_id: "{{ states('input_text.jotty_selected_task_id') }}"
-        status_options: >
-          {% set ns = namespace(options=['-- Select status --']) %}
-          {% for state in states.sensor %}
-            {% if state.name.startswith('Jotty Task:') %}
-              {% if state_attr(state.entity_id, 'task_id') == task_id %}
-                {% set statuses = state_attr(state.entity_id, 'statuses') or [] %}
-                {% for status in statuses | sort(attribute='order') %}
-                  {% set ns.options = ns.options + [status.name ~ ' (' ~ status.id ~ ')'] %}
-                {% endfor %}
-              {% endif %}
-            {% endif %}
-          {% endfor %}
-          {{ ns.options }}
-    - service: input_select.set_options
-      target:
-        entity_id: input_select.jotty_status_picker
-      data:
-        options: "{{ status_options }}"
-
-jotty_create_kanban_status:
-  alias: "Jotty: Create Kanban Status"
-  sequence:
-    - condition: template
-      value_template: >
-        {{ states('input_text.jotty_selected_task_id') | trim | length > 0 and
-           states('input_text.jotty_new_status_id') | trim | length > 0 and
-           states('input_text.jotty_new_status_label') | trim | length > 0 }}
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.create_task_status
-      data:
-        task_id: "{{ states('input_text.jotty_selected_task_id') }}"
-        status_id: "{{ states('input_text.jotty_new_status_id') }}"
-        label: "{{ states('input_text.jotty_new_status_label') }}"
-        color: "{{ states('input_text.jotty_new_status_color') }}"
-        order: "{{ states('input_number.jotty_new_status_order') | int }}"
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_new_status_id
-      data:
-        value: ""
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_new_status_label
-      data:
-        value: ""
-    - delay:
-        milliseconds: 500
-    - service: script.jotty_load_task_statuses
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-
-jotty_update_kanban_status:
-  alias: "Jotty: Update Kanban Status"
-  sequence:
-    - condition: template
-      value_template: >
-        {{ states('input_text.jotty_selected_task_id') | trim | length > 0 and
-           states('input_text.jotty_edit_status_id') | trim | length > 0 }}
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.update_task_status
-      data:
-        task_id: "{{ states('input_text.jotty_selected_task_id') }}"
-        status_id: "{{ states('input_text.jotty_edit_status_id') }}"
-        label: "{{ states('input_text.jotty_edit_status_label') if states('input_text.jotty_edit_status_label') | trim | length > 0 else none }}"
-        color: "{{ states('input_text.jotty_edit_status_color') if states('input_text.jotty_edit_status_color') | trim | length > 0 else none }}"
-    - delay:
-        milliseconds: 500
-    - service: script.jotty_load_task_statuses
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading
-
-jotty_delete_kanban_status:
-  alias: "Jotty: Delete Kanban Status"
-  fields:
-    status_id:
-      description: "Status ID to delete"
-      example: "review"
-  sequence:
-    - condition: template
-      value_template: "{{ states('input_text.jotty_selected_task_id') | trim | length > 0 }}"
-    - service: input_boolean.turn_on
-      target:
-        entity_id: input_boolean.jotty_is_loading
-    - service: jotty.delete_task_status
-      data:
-        task_id: "{{ states('input_text.jotty_selected_task_id') }}"
-        status_id: "{{ status_id }}"
-    - delay:
-        milliseconds: 500
-    - service: script.jotty_load_task_statuses
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_is_loading     
-
-jotty_load_reminder:
-  alias: "Jotty: Load Reminder"
-  fields:
-    item_id:
-      description: "List/task ID"
-  sequence:
-    - variables:
-        configs: "{{ state_attr('sensor.jotty_reminders', 'configs') or {} }}"
-        config: "{{ configs.get(item_id, {}) if configs is mapping else {} }}"
-        has_reminder: "{{ configs is mapping and item_id in configs }}"
-    - service: input_boolean.turn_{{ 'on' if has_reminder else 'off' }}
-      target:
-        entity_id: input_boolean.jotty_enable_reminder
-    - service: input_select.select_option
-      target:
-        entity_id: input_select.jotty_reminder_target
-      data:
-        option: >
-          {% set target = config.get('target', 'Nobody') %}
-          {% set options = state_attr('input_select.jotty_reminder_target', 'options') | default(['Nobody']) %}
-          {{ target if target in options else 'Nobody' }}
-    - service: input_select.select_option
-      target:
-        entity_id: input_select.jotty_reminder_interval
-      data:
-        option: "{{ config.get('interval', '1 hour') }}"
-    - service: input_select.select_option
-      target:
-        entity_id: input_select.jotty_reminder_days
-      data:
-        option: >
-          {% set d = config.get('days', 'weekdays') %}
-          {% if d == 'weekdays' %}Weekdays{% elif d == 'weekends' %}Weekends{% else %}Every day{% endif %}
-    - service: input_datetime.set_datetime
-      target:
-        entity_id: input_datetime.jotty_reminder_start
-      data:
-        time: "{{ config.get('start', '09:00') }}"
-    - service: input_datetime.set_datetime
-      target:
-        entity_id: input_datetime.jotty_reminder_end
-      data:
-        time: "{{ config.get('end', '22:00') }}"
-
-jotty_save_reminder:
-  alias: "Jotty: Save Reminder"
-  sequence:
-    - variables:
-        item_id: "{{ states('input_text.jotty_editing_reminder_id') }}"
-        item_type: "{{ states('input_text.jotty_editing_reminder_type') }}"
-        item_title: "{{ states('input_text.jotty_editing_reminder_title') }}"
-        enabled: "{{ is_state('input_boolean.jotty_enable_reminder', 'on') }}"
-        target: "{{ states('input_select.jotty_reminder_target') }}"
-        interval: "{{ states('input_select.jotty_reminder_interval') }}"
-        days_raw: "{{ states('input_select.jotty_reminder_days') }}"
-        days: "{% if days_raw == 'Weekdays' %}weekdays{% elif days_raw == 'Weekends' %}weekends{% else %}every_day{% endif %}"
-        start_time: "{{ states('input_datetime.jotty_reminder_start') }}"
-        end_time: "{{ states('input_datetime.jotty_reminder_end') }}"
-        configs: "{{ state_attr('sensor.jotty_reminders', 'configs') or {} }}"
-        old_last_sent: "{{ (configs.get(item_id, {}) if configs is mapping else {}).get('last_sent', '') }}"
-    - condition: template
-      value_template: "{{ item_id != '' }}"
-    - choose:
-        - conditions: "{{ enabled }}"
-          sequence:
-            - variables:
-                new_config:
-                  target: "{{ target }}"
-                  interval: "{{ interval }}"
-                  days: "{{ days }}"
-                  start: "{{ start_time }}"
-                  end: "{{ end_time }}"
-                  type: "{{ item_type }}"
-                  last_sent: "{{ old_last_sent }}"
-                updated_configs: "{{ dict(configs, **{item_id: new_config}) }}"
-            - event: jotty_reminder_update
-              event_data:
-                configs: "{{ updated_configs }}"
-            - service: persistent_notification.create
-              data:
-                title: "Reminder Saved"
-                message: "{{ item_title }}"
-                notification_id: jotty_reminder_saved
-        - conditions: "{{ not enabled }}"
-          sequence:
-            - variables:
-                updated_configs: >
-                  {% set safe_configs = configs if configs is mapping else {} %}
-                  {% set ns = namespace(result={}) %}
-                  {% for key, val in safe_configs.items() %}
-                    {% if key != item_id %}
-                      {% set ns.result = dict(ns.result, **{key: val}) %}
-                    {% endif %}
-                  {% endfor %}
-                  {{ ns.result }}
-            - event: jotty_reminder_update
-              event_data:
-                configs: "{{ updated_configs }}"
-            - service: persistent_notification.create
-              data:
-                title: "Reminder Removed"
-                message: "{{ item_title }}"
-                notification_id: jotty_reminder_saved
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.jotty_show_reminder_popup
-
-jotty_open_reminder_for_list:
-  alias: "Jotty: Open Reminder For List"
-  fields:
-    list_id:
-      description: "Checklist ID"
-    list_title:
-      description: "Checklist title"
-  sequence:
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_editing_reminder_type
-      data:
-        value: "checklist"
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_editing_reminder_title
-      data:
-        value: "{{ list_title }}"
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_editing_reminder_id
-      data:
-        value: "{{ list_id }}"
-
-jotty_open_reminder_for_task:
-  alias: "Jotty: Open Reminder For Task"
-  fields:
-    task_id:
-      description: "Task ID"
-    task_title:
-      description: "Task title"
-  sequence:
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_editing_reminder_type
-      data:
-        value: "task"
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_editing_reminder_title
-      data:
-        value: "{{ task_title }}"
-    - service: input_text.set_value
-      target:
-        entity_id: input_text.jotty_editing_reminder_id
-      data:
-        value: "{{ task_id }}"
 
 jotty_refresh_notifiers:
   alias: "Jotty: Refresh Notifiers"
+  icon: mdi:bell-ring
   sequence:
     - service: homeassistant.update_entity
       target:
         entity_id: sensor.jotty_available_notifiers
-    - delay:
-        seconds: 2
+    - variables:
+        notifiers: "{{ state_attr('sensor.jotty_available_notifiers', 'notifiers') | default([]) }}"
+        options: "{{ ['Nobody'] + notifiers }}"
     - service: input_select.set_options
       target:
         entity_id: input_select.jotty_reminder_target
       data:
-        options: "{{ state_attr('sensor.jotty_available_notifiers', 'notifiers') | default(['Nobody']) }}"
+        options: "{{ options }}"
+    - service: persistent_notification.create
+      data:
+        title: "Notifiers Refreshed"
+        message: "Found {{ notifiers | length }} mobile app notifiers"
+        notification_id: jotty_notifiers_refreshed
 
-jotty_save_reminder_inline:
-  alias: "Jotty: Save Reminder (Inline)"
+jotty_save_reminder:
+  alias: "Jotty: Save Reminder"
   fields:
     item_id:
       description: "List/task ID"
     item_type:
       description: "checklist or task"
-    target:
+    targets:
       description: "Comma-separated notify service targets"
     interval:
-      description: "Reminder interval"
+      description: "How often to remind"
     days:
-      description: "Days to remind"
-    start_time:
-      description: "Start time"
-    end_time:
-      description: "End time"
+      description: "weekdays, weekends, or every_day"
+    start:
+      description: "Start time HH:MM"
+    end:
+      description: "End time HH:MM"
     custom_title:
-      description: "Custom notification title (optional)"
+      description: "Optional custom notification title"
     custom_message:
-      description: "Custom notification message (optional)"
+      description: "Optional custom notification message"
   sequence:
     - variables:
         configs: "{{ state_attr('sensor.jotty_reminders', 'configs') or {} }}"
-        old_last_sent: "{{ (configs.get(item_id, {}) if configs is mapping else {}).get('last_sent', '') }}"
     - condition: template
-      value_template: "{{ item_id != '' and target != '' }}"
+      value_template: "{{ item_id != '' and targets != '' }}"
     - variables:
         new_config:
-          targets: "{{ target }}"
+          targets: "{{ targets }}"
           interval: "{{ interval }}"
           days: "{{ days }}"
-          start: "{{ start_time }}"
-          end: "{{ end_time }}"
+          start: "{{ start }}"
+          end: "{{ end }}"
           type: "{{ item_type }}"
           custom_title: "{{ custom_title | default('') }}"
           custom_message: "{{ custom_message | default('') }}"
-          last_sent: "{{ old_last_sent }}"
+          last_sent: ""
         safe_configs: "{{ configs if configs is mapping else {} }}"
         updated_configs: "{{ dict(safe_configs, **{item_id: new_config}) }}"
     - event: jotty_reminder_update
@@ -1108,11 +405,11 @@ jotty_save_reminder_inline:
     - service: persistent_notification.create
       data:
         title: "Reminder Saved"
-        message: "Reminder configured for {{ target.split(',') | length }} device(s)"
+        message: "Reminders configured for {{ targets }}"
         notification_id: jotty_reminder_saved
 
-jotty_remove_reminder_inline:
-  alias: "Jotty: Remove Reminder (Inline)"
+jotty_remove_reminder:
+  alias: "Jotty: Remove Reminder"
   fields:
     item_id:
       description: "List/task ID"
@@ -1192,8 +489,8 @@ jotty_send_note_to_devices:
       data:
         title: "Note Sent"
         message: "Sent '{{ title }}' to {{ target_list | length }} device(s)"
-        notification_id: jotty_note_sent       
-        
+        notification_id: jotty_note_sent
+
 jotty_save_recurring:
   alias: "Jotty: Save Recurring"
   fields:
@@ -1340,4 +637,147 @@ jotty_reset_task:
               status: "todo"
           - delay:
               seconds: 1
+
+jotty_schedule_note:
+  alias: "Jotty: Schedule Note"
+  fields:
+    note_id:
+      description: "Note ID"
+    title:
+      description: "Note title"
+    message:
+      description: "Note content"
+    targets:
+      description: "Comma-separated notify service targets"
+    scheduled_time:
+      description: "ISO datetime string for when to send"
+  sequence:
+    - variables:
+        schedules: "{{ state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} }}"
+        schedule_id: "{{ (now().timestamp() * 1000) | int | string ~ '_' ~ (range(1000, 9999) | random | string) }}"
+        new_schedule:
+          note_id: "{{ note_id }}"
+          title: "{{ title }}"
+          message: "{{ message }}"
+          targets: "{{ targets }}"
+          scheduled_time: "{{ scheduled_time }}"
+          created: "{{ now().isoformat() }}"
+        safe_schedules: "{{ schedules if schedules is mapping else {} }}"
+        updated_schedules: "{{ dict(safe_schedules, **{schedule_id: new_schedule}) }}"
+    - event: jotty_scheduled_notes_update
+      event_data:
+        schedules: "{{ updated_schedules }}"
+    - service: persistent_notification.create
+      data:
+        title: "Note Scheduled"
+        message: "{{ title }} scheduled for {{ as_timestamp(scheduled_time) | timestamp_custom('%b %d at %I:%M %p') }}"
+        notification_id: jotty_note_scheduled
+
+jotty_cancel_scheduled_note:
+  alias: "Jotty: Cancel Scheduled Note"
+  fields:
+    schedule_id:
+      description: "Schedule ID to cancel"
+  sequence:
+    - variables:
+        schedules: "{{ state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} }}"
+    - condition: template
+      value_template: "{{ schedules is mapping and schedule_id in schedules }}"
+    - variables:
+        updated_schedules: >
+          {% set safe_schedules = schedules if schedules is mapping else {} %}
+          {% set ns = namespace(result={}) %}
+          {% for key, val in safe_schedules.items() %}
+            {% if key != schedule_id %}
+              {% set ns.result = dict(ns.result, **{key: val}) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.result }}
+    - event: jotty_scheduled_notes_update
+      event_data:
+        schedules: "{{ updated_schedules }}"
+    - service: persistent_notification.create
+      data:
+        title: "Scheduled Note Cancelled"
+        message: "The scheduled note has been cancelled"
+        notification_id: jotty_note_cancelled
+
+jotty_send_scheduled_note:
+  alias: "Jotty: Send Scheduled Note"
+  fields:
+    schedule_id:
+      description: "Schedule ID"
+    title:
+      description: "Note title"
+    message:
+      description: "Note content"
+    targets:
+      description: "Comma-separated notify service targets"
+  sequence:
+    - variables:
+        target_list: "{{ targets.split(',') }}"
+    - repeat:
+        count: "{{ target_list | length }}"
+        sequence:
+          - service: "{{ target_list[repeat.index - 1] }}"
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+              data:
+                tag: "jotty_scheduled_{{ schedule_id }}"
+    - variables:
+        schedules: "{{ state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} }}"
+        updated_schedules: >
+          {% set safe_schedules = schedules if schedules is mapping else {} %}
+          {% set ns = namespace(result={}) %}
+          {% for key, val in safe_schedules.items() %}
+            {% if key != schedule_id %}
+              {% set ns.result = dict(ns.result, **{key: val}) %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.result }}
+    - event: jotty_scheduled_notes_update
+      event_data:
+        schedules: "{{ updated_schedules }}"
+
+jotty_debug_scheduled_notes:
+  alias: "Jotty: Debug Scheduled Notes"
+  sequence:
+    - variables:
+        schedules: "{{ state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} }}"
+        schedules_count: "{{ schedules | length if schedules is mapping else 'NOT A MAPPING' }}"
+        schedules_keys: "{{ schedules | list if schedules is mapping else [] }}"
+        current_ts: "{{ now().timestamp() }}"
+    - service: persistent_notification.create
+      data:
+        title: "Scheduled Notes Debug"
+        message: >
+          Schedules count: {{ schedules_count }}
+          
+          Keys: {{ schedules_keys }}
+          
+          Current timestamp: {{ current_ts }}
+          
+          Raw schedules: {{ schedules }}
+        notification_id: jotty_debug
+
+jotty_force_send_scheduled:
+  alias: "Jotty: Force Send All Scheduled"
+  sequence:
+    - variables:
+        schedules: "{{ state_attr('sensor.jotty_scheduled_notes', 'schedules') or {} }}"
+    - condition: template
+      value_template: "{{ schedules is mapping and schedules | length > 0 }}"
+    - repeat:
+        for_each: "{{ schedules | list }}"
+        sequence:
+          - variables:
+              schedule_id: "{{ repeat.item }}"
+              schedule: "{{ schedules[repeat.item] }}"
+          - service: script.jotty_send_scheduled_note
+            data:
+              schedule_id: "{{ schedule_id }}"
+              title: "{{ schedule.title | default('Note') }}"
+              message: "{{ schedule.message | default('') }}"
+              targets: "{{ schedule.targets | default('') }}"
       
